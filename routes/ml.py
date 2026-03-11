@@ -15,7 +15,7 @@ WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015'
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
 GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY", "")
-GROQ_API_KEY          = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_KEY          = os.environ.get("GROQ_API_KEY", "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")
 
 
 # ============================================================
