@@ -158,8 +158,7 @@ SYNONYMS = {
 
 GEMINI_MODELS = [
     'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash-lite', 
 ]
 
 GEMINI_PROMPT = """You are an expert Indian agricultural crop identifier.
@@ -413,57 +412,112 @@ def _detect_with_gemini(image_bytes, media_type):
 
     return None
 
+# Replace ONLY these two things in your routes/ml.py:
 
+# 1. Replace GEMINI_MODELS list with this:
+GEMINI_MODELS = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite', 
+]
+
+# 2. Replace the entire _detect_with_clip function with this:
 def _detect_with_clip(image_bytes):
-    import base64
-    CROP_LABELS = [
-        'tomato vegetable','potato vegetable','onion vegetable','garlic bulb','ginger root',
-        'brinjal eggplant','green capsicum','red chilli pepper','cauliflower','cabbage',
-        'spinach leaves','carrot vegetable','radish','beetroot','okra ladyfinger',
-        'green peas','cucumber','pumpkin','watermelon','mango fruit','banana fruit',
-        'apple fruit','grapes','orange fruit','papaya','wheat grain','rice grain',
-        'corn maize','rose flower','marigold flower','jasmine flower','sunflower',
+    """Uses Hugging Face Inference API with a proper image classification model"""
+    import base64, json
+
+    print(f'[HF] Trying image classification...')
+
+    # Convert to base64
+    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+
+    # Try multiple HuggingFace models
+    HF_MODELS = [
+        'google/vit-base-patch16-224',
+        'microsoft/resnet-50',
+        'facebook/deit-base-distilled-patch16-224',
     ]
-    LABEL_TO_CROP = {
-        'tomato vegetable':'tomato','potato vegetable':'potato','onion vegetable':'onion',
-        'garlic bulb':'garlic','ginger root':'ginger','brinjal eggplant':'brinjal',
-        'green capsicum':'capsicum','red chilli pepper':'chilli','cauliflower':'cauliflower',
-        'cabbage':'cabbage','spinach leaves':'spinach','carrot vegetable':'carrot',
-        'radish':'radish','beetroot':'beetroot','okra ladyfinger':'okra','green peas':'peas',
-        'cucumber':'cucumber','pumpkin':'pumpkin','watermelon':'watermelon','mango fruit':'mango',
-        'banana fruit':'banana','apple fruit':'apple','grapes':'grapes','orange fruit':'orange',
-        'papaya':'papaya','wheat grain':'wheat','rice grain':'rice','corn maize':'corn',
-        'rose flower':'rose','marigold flower':'marigold','jasmine flower':'jasmine','sunflower':'sunflower',
-    }
-    try:
-        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-        resp = requests.post(
-            'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
-            headers={'Content-Type': 'application/json'},
-            json={'inputs': image_b64, 'parameters': {'candidate_labels': CROP_LABELS}},
-            timeout=25
-        )
-        if resp.status_code == 503:
-            import time; time.sleep(15)
+
+    for model_id in HF_MODELS:
+        try:
             resp = requests.post(
-                'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
-                headers={'Content-Type': 'application/json'},
-                json={'inputs': image_b64, 'parameters': {'candidate_labels': CROP_LABELS}},
-                timeout=30
+                f'https://api-inference.huggingface.co/models/{model_id}',
+                headers={'Content-Type': 'application/octet-stream'},
+                data=image_bytes,
+                timeout=20
             )
-        if resp.status_code != 200:
-            print(f'[CLIP] status={resp.status_code}')
-            return None
-        results   = resp.json()
-        if not isinstance(results, list) or not results: return None
-        best_label = results[0].get('label', '').lower().strip()
-        best_score = results[0].get('score', 0)
-        print(f'[CLIP] best={best_label} score={best_score:.3f}')
-        if best_score < 0.10: return None
-        return LABEL_TO_CROP.get(best_label, best_label.split()[0])
-    except Exception as e:
-        print(f'[CLIP ERROR] {e}')
-        return None
+            print(f'[HF] {model_id} status={resp.status_code}')
+
+            if resp.status_code == 503:
+                # Model loading, wait and retry once
+                import time; time.sleep(10)
+                resp = requests.post(
+                    f'https://api-inference.huggingface.co/models/{model_id}',
+                    headers={'Content-Type': 'application/octet-stream'},
+                    data=image_bytes,
+                    timeout=25
+                )
+
+            if resp.status_code != 200:
+                continue
+
+            results = resp.json()
+            if not isinstance(results, list) or not results:
+                continue
+
+            print(f'[HF] Top results: {results[:3]}')
+
+            # Match ImageNet labels to our crops
+            IMAGENET_TO_CROP = {
+                'tomato': 'tomato', 'potato': 'potato', 'onion': 'onion',
+                'corn': 'corn', 'maize': 'corn', 'ear of corn': 'corn',
+                'banana': 'banana', 'apple': 'apple', 'orange': 'orange',
+                'mango': 'mango', 'grapes': 'grapes', 'grape': 'grapes',
+                'cauliflower': 'cauliflower', 'cabbage': 'cabbage',
+                'carrot': 'carrot', 'cucumber': 'cucumber', 'pumpkin': 'pumpkin',
+                'watermelon': 'watermelon', 'papaya': 'papaya',
+                'spinach': 'spinach', 'broccoli': 'cauliflower',
+                'pepper': 'capsicum', 'bell pepper': 'capsicum', 'chili': 'chilli',
+                'ginger': 'ginger', 'garlic': 'garlic', 'strawberry': 'tomato',
+                'lemon': 'orange', 'fig': 'mango', 'jackfruit': 'mango',
+                'wheat': 'wheat', 'rice': 'rice', 'grain': 'wheat',
+                'rose': 'rose', 'sunflower': 'sunflower', 'daisy': 'marigold',
+                'zucchini': 'cucumber', 'acorn squash': 'pumpkin',
+                'butternut squash': 'pumpkin', 'artichoke': 'cauliflower',
+                'head cabbage': 'cabbage', 'brinjal': 'brinjal',
+                'eggplant': 'brinjal', 'aubergine': 'brinjal',
+            }
+
+            for result in results[:5]:
+                label = result.get('label', '').lower()
+                score = result.get('score', 0)
+                if score < 0.05:
+                    continue
+
+                # Direct match
+                if label in IMAGENET_TO_CROP:
+                    crop = IMAGENET_TO_CROP[label]
+                    print(f'[HF] Matched: {label} -> {crop} (score={score:.3f})')
+                    return crop
+
+                # Partial match against our crops
+                for crop in SUPPORTED_CROPS:
+                    if crop in label:
+                        print(f'[HF] Partial match: {label} -> {crop}')
+                        return crop
+
+                # Partial match against IMAGENET dict keys
+                for key, crop in IMAGENET_TO_CROP.items():
+                    if key in label or label in key:
+                        print(f'[HF] Key match: {label} -> {crop}')
+                        return crop
+
+            print(f'[HF] No crop matched')
+
+        except Exception as e:
+            print(f'[HF ERROR] {model_id}: {e}')
+            continue
+
+    return None
 
 
 # ============================================================
