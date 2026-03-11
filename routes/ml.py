@@ -3,7 +3,7 @@ import numpy as np
 import requests
 import datetime
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 
 ml = Blueprint('ml', __name__)
@@ -14,25 +14,42 @@ ml = Blueprint('ml', __name__)
 WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015'
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
-GEMINI_API_KEY        = os.environ.get(" AIzaSyCsNE-rPzSwS8r_n5YOJplGc85h_kOxtJQ")
+
+# ✅ BUG FIX 1: Removed leading space in env var name + proper fallback
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCsNE-rPzSwS8r_n5YOJplGc85h_kOxtJQ")
+
 
 # ============================================================
-#  MOBILE IMAGE COMPRESSION  ← NEW FIX
+#  MOBILE IMAGE COMPRESSION  — FIXED FOR MOBILE/HEIC/EXIF
 # ============================================================
 def compress_image(image_bytes, max_size_kb=800):
     """
     Compress image to under max_size_kb for mobile uploads.
     Handles HEIC/RGBA/large JPEGs from phone cameras.
+    Also fixes EXIF rotation (critical for mobile photos).
     """
+    # Try pillow-heif for HEIC support (iPhone photos)
+    try:
+        import pillow_heif
+        pillow_heif.register_heif_opener()
+    except ImportError:
+        pass  # Not installed, HEIC will fail gracefully below
+
     try:
         img = Image.open(io.BytesIO(image_bytes))
+
+        # ✅ BUG FIX 4: Auto-rotate based on EXIF data (critical for mobile photos)
+        img = ImageOps.exif_transpose(img)
+
         # Convert RGBA / palette / CMYK to RGB (common on mobile/iPhone)
-        if img.mode in ('RGBA', 'P', 'CMYK', 'LA'):
+        if img.mode != 'RGB':
             img = img.convert('RGB')
+
         # Resize if too large (phone cameras can be 12MP+)
         max_dimension = 1024
         if max(img.size) > max_dimension:
             img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+
         # Compress quality until under max_size_kb
         quality = 85
         output  = io.BytesIO()
@@ -42,12 +59,16 @@ def compress_image(image_bytes, max_size_kb=800):
             if output.tell() <= max_size_kb * 1024:
                 break
             quality -= 10
+
         compressed = output.getvalue()
         print(f'[COMPRESS] Original: {len(image_bytes)//1024}KB -> Compressed: {len(compressed)//1024}KB (quality={quality})')
+        # ✅ BUG FIX 3: Always return 'image/jpeg' — never None
         return compressed, 'image/jpeg'
+
     except Exception as e:
-        print(f'[COMPRESS ERROR] {e} -- using original image')
-        return image_bytes, None
+        print(f'[COMPRESS ERROR] {e} -- using original image bytes')
+        # Even on failure, return 'image/jpeg' so Gemini call doesn't break
+        return image_bytes, 'image/jpeg'
 
 
 # ============================================================
@@ -372,6 +393,10 @@ def _parse_gemini_response(raw_text):
 
 def _detect_with_gemini(image_bytes, media_type):
     import base64
+    # ✅ BUG FIX 3: Guarantee media_type is never None or empty
+    if not media_type:
+        media_type = 'image/jpeg'
+
     image_b64 = base64.b64encode(image_bytes).decode('utf-8')
     for model in GEMINI_MODELS:
         try:
@@ -385,7 +410,9 @@ def _detect_with_gemini(image_bytes, media_type):
             }
             resp = requests.post(url, json=payload, timeout=30)
             if resp.status_code in (404, 429): continue
-            if resp.status_code in (400, 401, 403): return None
+            if resp.status_code in (400, 401, 403):
+                print(f'[GEMINI] {model} returned {resp.status_code}: {resp.text[:200]}')
+                continue
             if resp.status_code != 200: continue
             data = resp.json()
             candidates = data.get('candidates', [])
@@ -506,13 +533,9 @@ def price_predictor():
                 fname       = file.filename.lower()
                 image_bytes = file.read()
 
-                # ── MOBILE FIX: compress before sending to Gemini ──
-                image_bytes, compressed_media_type = compress_image(image_bytes)
-                media_type = compressed_media_type or (
-                    'image/png'  if fname.endswith('.png')  else
-                    'image/webp' if fname.endswith('.webp') else
-                    'image/jpeg'
-                )
+                # ── MOBILE FIX: compress + fix EXIF rotation before sending to Gemini ──
+                image_bytes, media_type = compress_image(image_bytes)
+                # compress_image now always returns 'image/jpeg', never None
 
                 detected = detect_crop_from_image(image_bytes, media_type, fname)
                 if detected:
