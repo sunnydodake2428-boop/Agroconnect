@@ -3,6 +3,8 @@ import numpy as np
 import requests
 import datetime
 import os
+from PIL import Image
+import io
 
 ml = Blueprint('ml', __name__)
 
@@ -12,7 +14,41 @@ ml = Blueprint('ml', __name__)
 WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015'
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCsNE-rPzSwS8r_n5YOJplGc85h_kOxtJQ")
+GEMINI_API_KEY        = os.environ.get(" AIzaSyCsNE-rPzSwS8r_n5YOJplGc85h_kOxtJQ")
+
+# ============================================================
+#  MOBILE IMAGE COMPRESSION  ← NEW FIX
+# ============================================================
+def compress_image(image_bytes, max_size_kb=800):
+    """
+    Compress image to under max_size_kb for mobile uploads.
+    Handles HEIC/RGBA/large JPEGs from phone cameras.
+    """
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        # Convert RGBA / palette / CMYK to RGB (common on mobile/iPhone)
+        if img.mode in ('RGBA', 'P', 'CMYK', 'LA'):
+            img = img.convert('RGB')
+        # Resize if too large (phone cameras can be 12MP+)
+        max_dimension = 1024
+        if max(img.size) > max_dimension:
+            img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+        # Compress quality until under max_size_kb
+        quality = 85
+        output  = io.BytesIO()
+        while quality >= 20:
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            if output.tell() <= max_size_kb * 1024:
+                break
+            quality -= 10
+        compressed = output.getvalue()
+        print(f'[COMPRESS] Original: {len(image_bytes)//1024}KB -> Compressed: {len(compressed)//1024}KB (quality={quality})')
+        return compressed, 'image/jpeg'
+    except Exception as e:
+        print(f'[COMPRESS ERROR] {e} -- using original image')
+        return image_bytes, None
+
 
 # ============================================================
 #  CROP MAPPINGS & PRICES
@@ -209,10 +245,10 @@ def get_smart_price(crop_name, season, weather=None, user_city=None):
     if weather:
         if weather.get('humidity', 0) > 75:
             weather_adj  = 1.08
-            weather_note = f"High humidity ({weather['humidity']}%) — price up 8%"
+            weather_note = f"High humidity ({weather['humidity']}%) -- price up 8%"
         if weather.get('temp', 0) > 38:
             weather_adj  = 1.12
-            weather_note = f"Extreme heat ({weather['temp']}°C) — price up 12%"
+            weather_note = f"Extreme heat ({weather['temp']}C) -- price up 12%"
 
     return {
         'price':        round(base_price * multiplier * weather_adj, 2),
@@ -299,7 +335,7 @@ def detect_crop_from_image(image_bytes, media_type, filename=''):
 
 def _detect_from_filename(filename):
     import re
-    name = re.sub(r'\.(jpg|jpeg|png|webp|gif)$', '', filename.lower())
+    name = re.sub(r'\.(jpg|jpeg|png|webp|gif|heic|heif)$', '', filename.lower())
     name = re.sub(r'[_\-]', ' ', name)
     for crop in SUPPORTED_CROPS:
         if crop in name:
@@ -347,7 +383,7 @@ def _detect_with_gemini(image_bytes, media_type):
                 ]}],
                 'generationConfig': {'maxOutputTokens': 20, 'temperature': 0.0, 'topP': 1, 'topK': 1}
             }
-            resp = requests.post(url, json=payload, timeout=20)
+            resp = requests.post(url, json=payload, timeout=30)
             if resp.status_code in (404, 429): continue
             if resp.status_code in (400, 401, 403): return None
             if resp.status_code != 200: continue
@@ -468,10 +504,17 @@ def price_predictor():
             file = request.files['crop_image']
             if file and file.filename != '':
                 fname       = file.filename.lower()
-                media_type  = ('image/png' if fname.endswith('.png') else
-                               'image/webp' if fname.endswith('.webp') else 'image/jpeg')
                 image_bytes = file.read()
-                detected    = detect_crop_from_image(image_bytes, media_type, fname)
+
+                # ── MOBILE FIX: compress before sending to Gemini ──
+                image_bytes, compressed_media_type = compress_image(image_bytes)
+                media_type = compressed_media_type or (
+                    'image/png'  if fname.endswith('.png')  else
+                    'image/webp' if fname.endswith('.webp') else
+                    'image/jpeg'
+                )
+
+                detected = detect_crop_from_image(image_bytes, media_type, fname)
                 if detected:
                     detected_crop = detected
                     crop_name     = detected
@@ -516,86 +559,52 @@ def price_predictor():
 
 
 # ============================================================
-#  ★ ML ENGINE — BEST TIME TO SELL
-#  Uses scikit-learn Polynomial Regression (degree=5)
-#  trained on 3 years of APMC Maharashtra historical data.
-#  R² scores: tomato=0.91, onion=0.94, rose=0.97 etc.
+#  ML ENGINE - BEST TIME TO SELL
 # ============================================================
-
-# 3 years × 12 months = 36 data points per crop
-# Each row = one month's average APMC modal price (₹/kg)
-# Source: APMC Maharashtra records 2021-2023
 HISTORICAL_APMC_DATA = {
     'tomato': [
-        # 2021
         38, 32, 24, 19, 21, 29, 34, 38, 32, 27, 30, 35,
-        # 2022
         36, 28, 20, 17, 19, 27, 31, 36, 29, 24, 27, 32,
-        # 2023
         37, 31, 23, 18, 20, 28, 33, 37, 31, 25, 29, 34,
     ],
     'onion': [
-        # 2021
         28, 22, 19, 24, 32, 38, 44, 40, 33, 25, 22, 25,
-        # 2022
         24, 18, 17, 21, 29, 34, 40, 37, 30, 22, 19, 22,
-        # 2023
         26, 20, 18, 23, 31, 36, 42, 39, 31, 23, 21, 24,
     ],
     'potato': [
-        # 2021
         20, 17, 13, 15, 20, 22, 24, 22, 17, 15, 16, 18,
-        # 2022
         17, 14, 11, 13, 17, 19, 21, 19, 15, 13, 14, 16,
-        # 2023
         19, 16, 12, 14, 19, 21, 23, 21, 16, 14, 15, 17,
     ],
     'wheat': [
-        # 2021
         23, 21, 19, 26, 29, 27, 25, 23, 21, 22, 23, 24,
-        # 2022
         22, 20, 18, 25, 28, 26, 24, 22, 20, 21, 22, 23,
-        # 2023
         24, 22, 20, 27, 30, 28, 26, 24, 22, 23, 24, 25,
     ],
     'mango': [
-        # 2021
         85, 78, 62, 46, 42, 57, 72, 82, 88, 93, 97, 90,
-        # 2022
         80, 74, 58, 44, 40, 54, 68, 78, 84, 89, 93, 86,
-        # 2023
         83, 77, 61, 45, 41, 56, 70, 81, 87, 92, 96, 89,
     ],
     'rice': [
-        # 2021
         40, 38, 35, 36, 39, 42, 40, 37, 32, 29, 33, 38,
-        # 2022
         37, 35, 32, 33, 36, 39, 37, 34, 29, 27, 30, 35,
-        # 2023
         39, 37, 34, 35, 38, 41, 39, 36, 31, 28, 32, 37,
     ],
     'rose': [
-        # 2021 — Valentine's + Diwali/wedding peaks
         190, 210, 165, 145, 135, 125, 135, 145, 155, 165, 185, 205,
-        # 2022
         175, 195, 155, 138, 128, 118, 128, 138, 148, 158, 178, 198,
-        # 2023
         185, 205, 160, 142, 132, 122, 132, 142, 152, 162, 182, 202,
     ],
     'marigold': [
-        # 2021 — Diwali (Oct/Nov) spike
         52, 47, 36, 31, 29, 31, 36, 42, 52, 84, 105, 92,
-        # 2022
-        48, 43, 33, 29, 27, 29, 33, 38, 48, 78, 98, 86,
-        # 2023
+        48, 43, 33, 29, 27, 29, 33, 38, 48, 78,  98, 86,
         51, 46, 35, 30, 28, 30, 35, 41, 51, 82, 103, 90,
     ],
     'jasmine': [
-        # 2021 — Monsoon + winter festival peaks
         185, 163, 153, 143, 163, 205, 225, 214, 193, 183, 204, 224,
-        # 2022
         176, 155, 145, 136, 155, 195, 215, 205, 184, 174, 194, 213,
-        # 2023
         182, 160, 150, 140, 160, 201, 221, 211, 190, 180, 200, 220,
     ],
 }
@@ -608,48 +617,26 @@ MONTH_NAMES = {
 
 
 def _train_model(crop):
-    """
-    Train a Polynomial Regression (degree=5) model on 3 years
-    of monthly APMC price data for the given crop.
-    Returns (model, poly_transformer) or (None, None) if not available.
-    """
     try:
-        from sklearn.preprocessing import PolynomialFeatures
         from sklearn.linear_model import Ridge
-        from sklearn.pipeline import Pipeline
-
         data = HISTORICAL_APMC_DATA.get(crop.lower())
         if not data:
             return None, None
-
-        # X = month index 1..36 (3 years × 12 months)
-        # We use month-of-year (1-12) as the primary feature
-        # and also feed year index so the model captures multi-year trend
         n = len(data)
         months_of_year = np.array([(i % 12) + 1 for i in range(n)], dtype=float)
         year_index     = np.array([i // 12 for i in range(n)], dtype=float)
-
-        # Feature matrix: [month, month², month³, sin, cos, year]
-        # sin/cos encode cyclical month pattern better than raw numbers
         sin_m = np.sin(2 * np.pi * months_of_year / 12)
         cos_m = np.cos(2 * np.pi * months_of_year / 12)
         X = np.column_stack([months_of_year, months_of_year**2, months_of_year**3,
                              sin_m, cos_m, year_index])
         y = np.array(data, dtype=float)
-
-        # Ridge regression prevents overfitting on small dataset
-        from sklearn.linear_model import Ridge
         model = Ridge(alpha=1.0)
         model.fit(X, y)
-
-        # R² score for transparency
         score = model.score(X, y)
-        print(f'[ML] {crop} model R²={score:.3f}')
-
-        return model, None   # we build features manually, no poly transformer needed
-
+        print(f'[ML] {crop} model R2={score:.3f}')
+        return model, None
     except ImportError:
-        print('[ML] scikit-learn not installed — falling back to pattern average')
+        print('[ML] scikit-learn not installed -- falling back to pattern average')
         return None, None
     except Exception as e:
         print(f'[ML] Training error for {crop}: {e}')
@@ -657,15 +644,7 @@ def _train_model(crop):
 
 
 def _predict_monthly_prices_ml(crop, target_year_index=3):
-    """
-    Use the trained ML model to predict the 12 monthly prices
-    for the NEXT year (year_index=3, i.e. 2024 forecast).
-
-    Falls back to plain average of historical data if sklearn unavailable.
-    Returns dict {1: price, 2: price, ..., 12: price}
-    """
     model, _ = _train_model(crop)
-
     if model is not None:
         predictions = {}
         for m in range(1, 13):
@@ -673,10 +652,8 @@ def _predict_monthly_prices_ml(crop, target_year_index=3):
             cos_m = np.cos(2 * np.pi * m / 12)
             x = np.array([[m, m**2, m**3, sin_m, cos_m, target_year_index]])
             pred = float(model.predict(x)[0])
-            predictions[m] = round(max(pred, 5.0), 2)   # floor at ₹5
+            predictions[m] = round(max(pred, 5.0), 2)
         return predictions, 'ml'
-
-    # Fallback: plain monthly average across all years
     data = HISTORICAL_APMC_DATA.get(crop.lower())
     if not data:
         return None, None
@@ -688,9 +665,6 @@ def _predict_monthly_prices_ml(crop, target_year_index=3):
     return predictions, 'average'
 
 
-# ============================================================
-#  BEST TIME TO SELL ROUTE
-# ============================================================
 @ml.route('/best-time-to-sell', methods=['GET', 'POST'])
 def best_time_to_sell():
     result           = None
@@ -705,24 +679,17 @@ def best_time_to_sell():
 
             if prices:
                 current_month = datetime.datetime.now().month
-
                 best_month  = max(prices, key=prices.get)
                 worst_month = min(prices, key=prices.get)
-
-                # Next 6 months window
                 future = {}
                 for i in range(6):
                     m = ((current_month - 1 + i) % 12) + 1
                     future[MONTH_NAMES[m]] = prices[m]
                 best_upcoming = max(future, key=future.get)
-
-                # Build chart trend data (all 12 months)
                 trend_data = [
                     {'month': MONTH_NAMES[m], 'price': prices[m]}
                     for m in range(1, 13)
                 ]
-
-                # Confidence label
                 if method == 'ml':
                     model, _ = _train_model(crop)
                     data = HISTORICAL_APMC_DATA.get(crop.lower(), [])
@@ -737,7 +704,7 @@ def best_time_to_sell():
                         r2 = round(model.score(X, np.array(data, dtype=float)), 3)
                     else:
                         r2 = None
-                    confidence = f'ML Model (R²={r2})' if r2 else 'ML Model'
+                    confidence = f'ML Model (R2={r2})' if r2 else 'ML Model'
                 else:
                     confidence = '3-Year APMC Historical Average'
 
@@ -756,9 +723,9 @@ def best_time_to_sell():
                     'best_earning':        round(prices[best_month]    * quantity, 2),
                     'current_earning':     round(prices[current_month] * quantity, 2),
                     'extra_earning':       round((prices[best_month] - prices[current_month]) * quantity, 2),
-                    'method':              method,       # 'ml' or 'average'
-                    'confidence':          confidence,   # shown in UI
-                    'data_years':          3,            # years of training data
+                    'method':              method,
+                    'confidence':          confidence,
+                    'data_years':          3,
                     'data_points':         len(HISTORICAL_APMC_DATA[crop]),
                 }
 
@@ -889,13 +856,13 @@ def _wmo_desc(code):
 
 
 def _wmo_icon(code):
-    if code == 0:                  return '01d'
-    if code in (1, 2):             return '02d'
-    if code == 3:                  return '04d'
-    if code in (45, 48):           return '50d'
+    if code == 0:                   return '01d'
+    if code in (1, 2):              return '02d'
+    if code == 3:                   return '04d'
+    if code in (45, 48):            return '50d'
     if code in (51,53,55,61,63,65): return '10d'
-    if code in (80,81,82):         return '09d'
-    if code in (95,96,99):         return '11d'
+    if code in (80,81,82):          return '09d'
+    if code in (95,96,99):          return '11d'
     return '03d'
 
 
@@ -904,15 +871,15 @@ def _generate_advisory(weather):
     temp = weather.get('temp', 25)
     hum  = weather.get('humidity', 50)
     desc = weather.get('description', '').lower()
-    if 'rain' in desc or 'drizzle' in desc: advisories.append('🌧 Rain detected — harvest moisture-sensitive crops immediately.')
-    if 'thunder' in desc:   advisories.append('⚡ Thunderstorm — avoid open fields.')
-    if temp >= 40:           advisories.append(f'🌡 Extreme heat ({temp}°C) — water crops in early morning only.')
-    elif temp >= 35:         advisories.append(f'☀️ High temp ({temp}°C) — increase irrigation.')
-    elif temp <= 10:         advisories.append(f'❄️ Cold ({temp}°C) — protect frost-sensitive crops.')
-    if hum >= 80:            advisories.append(f'💧 High humidity ({hum}%) — watch for fungal diseases.')
-    if hum <= 25:            advisories.append(f'🏜 Dry air ({hum}%) — ideal for grain storage.')
-    if 'clear' in desc:      advisories.append('🌤 Clear sky — excellent harvesting conditions.')
-    if not advisories:       advisories.append('✅ Normal conditions — continue regular farming activities.')
+    if 'rain' in desc or 'drizzle' in desc: advisories.append('Rain detected -- harvest moisture-sensitive crops immediately.')
+    if 'thunder' in desc:   advisories.append('Thunderstorm -- avoid open fields.')
+    if temp >= 40:           advisories.append(f'Extreme heat ({temp}C) -- water crops in early morning only.')
+    elif temp >= 35:         advisories.append(f'High temp ({temp}C) -- increase irrigation.')
+    elif temp <= 10:         advisories.append(f'Cold ({temp}C) -- protect frost-sensitive crops.')
+    if hum >= 80:            advisories.append(f'High humidity ({hum}%) -- watch for fungal diseases.')
+    if hum <= 25:            advisories.append(f'Dry air ({hum}%) -- ideal for grain storage.')
+    if 'clear' in desc:      advisories.append('Clear sky -- excellent harvesting conditions.')
+    if not advisories:       advisories.append('Normal conditions -- continue regular farming activities.')
     return advisories
 
 
