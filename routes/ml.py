@@ -14,43 +14,30 @@ ml = Blueprint('ml', __name__)
 WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015'
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
-
-# ✅ BUG FIX 1: Removed leading space in env var name + proper fallback
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCsNE-rPzSwS8r_n5YOJplGc85h_kOxtJQ")
+GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY")
 
 
 # ============================================================
-#  MOBILE IMAGE COMPRESSION  — FIXED FOR MOBILE/HEIC/EXIF
+#  MOBILE IMAGE COMPRESSION
 # ============================================================
 def compress_image(image_bytes, max_size_kb=800):
-    """
-    Compress image to under max_size_kb for mobile uploads.
-    Handles HEIC/RGBA/large JPEGs from phone cameras.
-    Also fixes EXIF rotation (critical for mobile photos).
-    """
-    # Try pillow-heif for HEIC support (iPhone photos)
     try:
         import pillow_heif
         pillow_heif.register_heif_opener()
     except ImportError:
-        pass  # Not installed, HEIC will fail gracefully below
+        pass
 
     try:
         img = Image.open(io.BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)   # fix mobile rotation
 
-        # ✅ BUG FIX 4: Auto-rotate based on EXIF data (critical for mobile photos)
-        img = ImageOps.exif_transpose(img)
-
-        # Convert RGBA / palette / CMYK to RGB (common on mobile/iPhone)
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
-        # Resize if too large (phone cameras can be 12MP+)
         max_dimension = 1024
         if max(img.size) > max_dimension:
             img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
 
-        # Compress quality until under max_size_kb
         quality = 85
         output  = io.BytesIO()
         while quality >= 20:
@@ -61,13 +48,11 @@ def compress_image(image_bytes, max_size_kb=800):
             quality -= 10
 
         compressed = output.getvalue()
-        print(f'[COMPRESS] Original: {len(image_bytes)//1024}KB -> Compressed: {len(compressed)//1024}KB (quality={quality})')
-        # ✅ BUG FIX 3: Always return 'image/jpeg' — never None
+        print(f'[COMPRESS] {len(image_bytes)//1024}KB -> {len(compressed)//1024}KB (q={quality})')
         return compressed, 'image/jpeg'
 
     except Exception as e:
-        print(f'[COMPRESS ERROR] {e} -- using original image bytes')
-        # Even on failure, return 'image/jpeg' so Gemini call doesn't break
+        print(f'[COMPRESS ERROR] {e}')
         return image_bytes, 'image/jpeg'
 
 
@@ -147,7 +132,6 @@ def fetch_agmarknet_price(crop_name, user_city=None, state='Maharashtra'):
 
     commodity = CROP_TO_AGMARKNET.get(crop_name.lower(), crop_name.title())
     base_url  = 'https://api.data.gov.in/resource/' + AGMARKNET_RESOURCE_ID
-
     filter_attempts = []
 
     if user_city:
@@ -393,9 +377,11 @@ def _parse_gemini_response(raw_text):
 
 def _detect_with_gemini(image_bytes, media_type):
     import base64
-    # ✅ BUG FIX 3: Guarantee media_type is never None or empty
     if not media_type:
         media_type = 'image/jpeg'
+    if not GEMINI_API_KEY:
+        print('[GEMINI] No API key set!')
+        return None
 
     image_b64 = base64.b64encode(image_bytes).decode('utf-8')
     for model in GEMINI_MODELS:
@@ -409,9 +395,10 @@ def _detect_with_gemini(image_bytes, media_type):
                 'generationConfig': {'maxOutputTokens': 20, 'temperature': 0.0, 'topP': 1, 'topK': 1}
             }
             resp = requests.post(url, json=payload, timeout=30)
+            print(f'[GEMINI] {model} status={resp.status_code}')
             if resp.status_code in (404, 429): continue
             if resp.status_code in (400, 401, 403):
-                print(f'[GEMINI] {model} returned {resp.status_code}: {resp.text[:200]}')
+                print(f'[GEMINI] Error body: {resp.text[:300]}')
                 continue
             if resp.status_code != 200: continue
             data = resp.json()
@@ -419,7 +406,9 @@ def _detect_with_gemini(image_bytes, media_type):
             if not candidates: continue
             if candidates[0].get('finishReason') == 'SAFETY': continue
             raw_text = candidates[0]['content']['parts'][0]['text']
+            print(f'[GEMINI] Raw response: {raw_text}')
             result = _parse_gemini_response(raw_text)
+            print(f'[GEMINI] Parsed crop: {result}')
             if result and result in SUPPORTED_CROPS:
                 return result
         except Exception as e:
@@ -530,22 +519,36 @@ def price_predictor():
         if 'crop_image' in request.files:
             file = request.files['crop_image']
             if file and file.filename != '':
-                fname       = file.filename.lower()
+                fname       = file.filename.lower() or 'upload.jpg'
                 image_bytes = file.read()
 
-                # ── MOBILE FIX: compress + fix EXIF rotation before sending to Gemini ──
-                image_bytes, media_type = compress_image(image_bytes)
-                # compress_image now always returns 'image/jpeg', never None
+                print(f'[UPLOAD] fname={fname} raw_size={len(image_bytes)} bytes')
 
-                detected = detect_crop_from_image(image_bytes, media_type, fname)
-                if detected:
-                    detected_crop = detected
-                    crop_name     = detected
-                elif manual_crop:
-                    crop_name     = _normalize_crop_name(manual_crop)
-                    detected_crop = crop_name
+                # Mobile sometimes sends 0 bytes — try stream fallback
+                if len(image_bytes) == 0:
+                    file.stream.seek(0)
+                    image_bytes = file.stream.read()
+                    print(f'[UPLOAD] Stream fallback size={len(image_bytes)} bytes')
+
+                if len(image_bytes) == 0:
+                    ai_failed     = True
+                    error_message = 'Image upload failed — please try again or type the crop name below.'
                 else:
-                    ai_failed = True
+                    # Compress + fix EXIF rotation for mobile
+                    image_bytes, media_type = compress_image(image_bytes)
+                    print(f'[UPLOAD] After compress: {len(image_bytes)} bytes type={media_type}')
+
+                    detected = detect_crop_from_image(image_bytes, media_type, fname)
+                    print(f'[UPLOAD] Detected: {detected}')
+
+                    if detected:
+                        detected_crop = detected
+                        crop_name     = detected
+                    elif manual_crop:
+                        crop_name     = _normalize_crop_name(manual_crop)
+                        detected_crop = crop_name
+                    else:
+                        ai_failed = True
 
         if not crop_name and manual_crop:
             crop_name     = _normalize_crop_name(manual_crop)
@@ -659,7 +662,7 @@ def _train_model(crop):
         print(f'[ML] {crop} model R2={score:.3f}')
         return model, None
     except ImportError:
-        print('[ML] scikit-learn not installed -- falling back to pattern average')
+        print('[ML] scikit-learn not installed')
         return None, None
     except Exception as e:
         print(f'[ML] Training error for {crop}: {e}')
