@@ -16,7 +16,7 @@ AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea3101
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
 
 # GEMINI KEY — reads from env, falls back to hardcoded for demo
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDF-tC_ciLlh_Zlm_6IVNpXSZGqCI4xSY0")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyALqlsBZvhqe1u9FkA8qD80NBDkWicqJ_0")
        # ← PASTE YOUR KEY HERE AS FALLBACK: "AIzaSy..."
 
 
@@ -158,8 +158,8 @@ SYNONYMS = {
 
 GEMINI_MODELS = [
     'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash-8b',
 ]
 
 GEMINI_PROMPT = """You are an expert Indian agricultural crop identifier.
