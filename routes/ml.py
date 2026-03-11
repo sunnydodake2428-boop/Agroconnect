@@ -14,11 +14,8 @@ ml = Blueprint('ml', __name__)
 WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015'
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
-
-# GEMINI KEY — reads from env, falls back to hardcoded for demo
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyALqlsBZvhqe1u9FkA8qD80NBDkWicqJ_0")
-       # ← PASTE YOUR KEY HERE AS FALLBACK: "AIzaSy..."
-
+GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY", "AIzaSyCN-placeholder")
+GROQ_API_KEY          = os.environ.get("GROQ_API_KEY", "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")
 
 
 # ============================================================
@@ -31,17 +28,13 @@ def compress_image(image_bytes, max_size_kb=800):
             pillow_heif.register_heif_opener()
         except ImportError:
             pass
-
         img = Image.open(io.BytesIO(image_bytes))
         img = ImageOps.exif_transpose(img)
-
         if img.mode not in ('RGB', 'L'):
             img = img.convert('RGB')
-
         max_dimension = 1024
         if max(img.size) > max_dimension:
             img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
-
         quality = 85
         output  = io.BytesIO()
         while quality >= 20:
@@ -50,11 +43,9 @@ def compress_image(image_bytes, max_size_kb=800):
             if output.tell() <= max_size_kb * 1024:
                 break
             quality -= 10
-
         compressed = output.getvalue()
         print(f'[COMPRESS] {len(image_bytes)//1024}KB -> {len(compressed)//1024}KB (q={quality})')
         return compressed, 'image/jpeg'
-
     except Exception as e:
         print(f'[COMPRESS ERROR] {e}')
         return image_bytes, 'image/jpeg'
@@ -101,29 +92,20 @@ MAHARASHTRA_CITY_TO_MARKET = {
     'sangli':['Sangli','Miraj','Tasgaon'],
     'satara':['Satara','Phaltan','Karad'],
     'ahmednagar':['Ahmednagar','Shrirampur','Rahuri'],
-    'latur':['Latur','Udgir'],
-    'nanded':['Nanded','Mukhed'],
+    'latur':['Latur','Udgir'],'nanded':['Nanded','Mukhed'],
     'jalgaon':['Jalgaon','Bhusawal','Yawal'],
-    'akola':['Akola','Washim'],
-    'amravati':['Amravati','Achalpur'],
+    'akola':['Akola','Washim'],'amravati':['Amravati','Achalpur'],
     'thane':['Thane','Bhiwandi','Kalyan'],
     'raigad':['Alibag','Pen','Panvel'],
     'ratnagiri':['Ratnagiri','Chiplun','Khed'],
     'sindhudurg':['Kudal','Sawantwadi'],
-    'dhule':['Dhule','Shirpur'],
-    'nandurbar':['Nandurbar','Shahada'],
-    'osmanabad':['Osmanabad','Tuljapur'],
-    'beed':['Beed','Ambejogai'],
-    'hingoli':['Hingoli','Kalamnuri'],
-    'parbhani':['Parbhani','Gangakhed'],
-    'yavatmal':['Yavatmal','Wani'],
-    'wardha':['Wardha','Hinganghat'],
-    'chandrapur':['Chandrapur','Ballarpur'],
-    'gadchiroli':['Gadchiroli'],
-    'gondia':['Gondia','Tirora'],
-    'bhandara':['Bhandara','Tumsar'],
-    'washim':['Washim','Malegaon'],
-    'buldhana':['Buldhana','Malkapur'],
+    'dhule':['Dhule','Shirpur'],'nandurbar':['Nandurbar','Shahada'],
+    'osmanabad':['Osmanabad','Tuljapur'],'beed':['Beed','Ambejogai'],
+    'hingoli':['Hingoli','Kalamnuri'],'parbhani':['Parbhani','Gangakhed'],
+    'yavatmal':['Yavatmal','Wani'],'wardha':['Wardha','Hinganghat'],
+    'chandrapur':['Chandrapur','Ballarpur'],'gadchiroli':['Gadchiroli'],
+    'gondia':['Gondia','Tirora'],'bhandara':['Bhandara','Tumsar'],
+    'washim':['Washim','Malegaon'],'buldhana':['Buldhana','Malkapur'],
 }
 
 SUPPORTED_CROPS = [
@@ -156,147 +138,17 @@ SYNONYMS = {
     'tarbuj':'watermelon',
 }
 
-GEMINI_MODELS = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite', 
-]
-
-GEMINI_PROMPT = """You are an expert Indian agricultural crop identifier.
-
-TASK: Look at the image and identify the ONE crop shown.
-
-Reply with ONLY one word from this exact list (nothing else):
-""" + ', '.join(SUPPORTED_CROPS)
-
-
-# ============================================================
-#  AGMARKNET LIVE PRICE
-# ============================================================
-def fetch_agmarknet_price(crop_name, user_city=None, state='Maharashtra'):
-    if not AGMARKNET_API_KEY:
-        return None
-    commodity = CROP_TO_AGMARKNET.get(crop_name.lower(), crop_name.title())
-    base_url  = 'https://api.data.gov.in/resource/' + AGMARKNET_RESOURCE_ID
-    filter_attempts = []
-
-    if user_city:
-        city_lower = user_city.lower()
-        for city_key, markets in MAHARASHTRA_CITY_TO_MARKET.items():
-            if city_key in city_lower or city_lower in city_key:
-                for market in markets[:2]:
-                    filter_attempts.append({
-                        'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 10,
-                        'filters[state.keyword]': 'Maharashtra',
-                        'filters[commodity]': commodity,
-                        'filters[market]': market,
-                    })
-                break
-
-    filter_attempts += [
-        {'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 100,
-         'filters[state.keyword]': 'Maharashtra', 'filters[commodity]': commodity},
-        {'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 100,
-         'filters[state]': 'Maharashtra', 'filters[commodity]': commodity},
-    ]
-
-    for i, params in enumerate(filter_attempts):
-        try:
-            resp    = requests.get(base_url, params=params, timeout=10)
-            if resp.status_code != 200: continue
-            records = resp.json().get('records', [])
-            if not records: continue
-            maha_records = [r for r in records if 'maharashtra' in str(r.get('state','')).lower()]
-            if not maha_records: continue
-
-            local_records = []
-            if user_city:
-                city_lower = user_city.lower()
-                for city_key, markets in MAHARASHTRA_CITY_TO_MARKET.items():
-                    if city_key in city_lower or city_lower in city_key:
-                        mkt_lower = [m.lower() for m in markets]
-                        local_records = [
-                            r for r in maha_records
-                            if any(m in str(r.get('market','')).lower() for m in mkt_lower)
-                        ]
-                        break
-
-            final_records = local_records if local_records else maha_records
-            prices = sorted([(float(r.get('modal_price',0) or 0), r) for r in final_records], key=lambda x: x[0])
-            valid  = [(p, r) for p, r in prices if p > 0]
-            if not valid: continue
-            rec     = valid[len(valid) // 2][1]
-            modal_q = float(rec.get('modal_price', 0) or 0)
-            if modal_q == 0: continue
-
-            return {
-                'modal_price': round(modal_q / 100, 2),
-                'min_price':   round(float(rec.get('min_price', 0) or 0) / 100, 2),
-                'max_price':   round(float(rec.get('max_price', 0) or 0) / 100, 2),
-                'market':      f"{rec.get('market','')}, {rec.get('district','')}".strip(', ') or 'Maharashtra Mandi',
-                'date':        rec.get('arrival_date', str(datetime.date.today())),
-                'source':      'agmarknet',
-                'state':       rec.get('state', 'Maharashtra'),
-            }
-        except Exception as e:
-            print(f'[AGMARKNET] Attempt {i+1} error: {e}')
-    return None
-
-
-def get_smart_price(crop_name, season, weather=None, user_city=None):
-    live = fetch_agmarknet_price(crop_name, user_city=user_city)
-    if live:
-        base_price = live['modal_price']
-        source     = 'agmarknet'
-        market     = live['market']
-        mandi_date = live['date']
-        raw_min    = live['min_price']
-        raw_max    = live['max_price']
-    else:
-        base_price = FALLBACK_BASE_PRICES.get(crop_name.lower(), 28)
-        source     = 'local'
-        market     = 'APMC Maharashtra Historical Average'
-        mandi_date = str(datetime.date.today())
-        raw_min    = round(base_price * 0.88, 2)
-        raw_max    = round(base_price * 1.15, 2)
-
-    multiplier   = SEASON_MULTIPLIER.get(season.lower(), 1.0)
-    weather_adj  = 1.0
-    weather_note = None
-    if weather:
-        if weather.get('humidity', 0) > 75:
-            weather_adj  = 1.08
-            weather_note = f"High humidity ({weather['humidity']}%) -- price up 8%"
-        if weather.get('temp', 0) > 38:
-            weather_adj  = 1.12
-            weather_note = f"Extreme heat ({weather['temp']}C) -- price up 12%"
-
-    return {
-        'price':        round(base_price * multiplier * weather_adj, 2),
-        'min_price':    round(raw_min    * multiplier * weather_adj, 2),
-        'max_price':    round(raw_max    * multiplier * weather_adj, 2),
-        'base_price':   base_price,
-        'source':       source,
-        'market':       market,
-        'mandi_date':   mandi_date,
-        'season_mult':  multiplier,
-        'weather_adj':  weather_adj,
-        'weather_note': weather_note,
-    }
-
 
 # ============================================================
 #  CROP DETECTION
 # ============================================================
 def detect_crop_from_image(image_bytes, media_type, filename=''):
-    result = _detect_with_gemini(image_bytes, media_type)
+    # Primary: Groq LLaMA Vision
+    result = _detect_with_groq(image_bytes, media_type)
     if result:
-        print(f'[DETECT] Gemini succeeded: {result}')
+        print(f'[DETECT] Groq succeeded: {result}')
         return result
-    print('[DETECT] Gemini failed, trying CLIP...')
-    result = _detect_with_clip(image_bytes)
-    if result:
-        print(f'[DETECT] CLIP succeeded: {result}')
-        return result
+    # Fallback: filename
     if filename:
         result = _detect_from_filename(filename)
         if result:
@@ -304,6 +156,76 @@ def detect_crop_from_image(image_bytes, media_type, filename=''):
             return result
     print('[DETECT] All methods failed')
     return None
+
+
+def _detect_with_groq(image_bytes, media_type):
+    import base64
+    if not GROQ_API_KEY:
+        print('[GROQ] No API key')
+        return None
+
+    print(f'[GROQ] Sending image {len(image_bytes)//1024}KB to LLaMA Vision...')
+    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+    mime = media_type or 'image/jpeg'
+
+    prompt = (
+        "You are an expert Indian agricultural crop identifier. "
+        "Look at this image and identify the crop or vegetable shown. "
+        "Reply with ONLY one word from this exact list (no other text): "
+        + ', '.join(SUPPORTED_CROPS)
+    )
+
+    try:
+        resp = requests.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {GROQ_API_KEY}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+                'messages': [{
+                    'role': 'user',
+                    'content': [
+                        {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{image_b64}'}},
+                        {'type': 'text', 'text': prompt}
+                    ]
+                }],
+                'max_tokens': 20,
+                'temperature': 0.0,
+            },
+            timeout=30
+        )
+        print(f'[GROQ] status={resp.status_code}')
+
+        if resp.status_code == 401:
+            print('[GROQ] Invalid API key')
+            return None
+        if resp.status_code == 429:
+            print('[GROQ] Rate limited')
+            return None
+        if resp.status_code != 200:
+            print(f'[GROQ] Error: {resp.text[:200]}')
+            return None
+
+        data    = resp.json()
+        raw     = data['choices'][0]['message']['content'].strip().lower()
+        print(f'[GROQ] Raw response: "{raw}"')
+        result  = _parse_response(raw)
+        print(f'[GROQ] Parsed: {result}')
+        return result
+
+    except Exception as e:
+        print(f'[GROQ ERROR] {e}')
+        return None
+
+
+def _detect_with_gemini(image_bytes, media_type):
+    return None  # Gemini blocked on Railway IPs
+
+
+def _detect_with_clip(image_bytes):
+    return None  # HuggingFace endpoints dead
 
 
 def _detect_from_filename(filename):
@@ -328,9 +250,9 @@ def _normalize_crop_name(text):
     return text
 
 
-def _parse_gemini_response(raw_text):
+def _parse_response(raw):
     import re
-    raw = re.sub(r'[^a-z \']', '', raw_text.strip().lower()).strip()
+    raw = re.sub(r'[^a-z \']', '', raw.strip().lower()).strip()
     for syn, crop in SYNONYMS.items():
         if syn in raw: return crop
     first = raw.split()[0] if raw.split() else ''
@@ -341,183 +263,107 @@ def _parse_gemini_response(raw_text):
     return first if len(first) > 2 else None
 
 
-def _detect_with_gemini(image_bytes, media_type):
-    import base64
-    if not media_type:
-        media_type = 'image/jpeg'
+def _parse_gemini_response(raw_text):
+    return _parse_response(raw_text)
 
-    if not GEMINI_API_KEY:
-        print('[GEMINI] ❌ No API key found! Set GEMINI_API_KEY env variable.')
+
+# ============================================================
+#  AGMARKNET LIVE PRICE
+# ============================================================
+def fetch_agmarknet_price(crop_name, user_city=None, state='Maharashtra'):
+    if not AGMARKNET_API_KEY:
         return None
-
-    print(f'[GEMINI] Key present: {GEMINI_API_KEY[:8]}... image={len(image_bytes)//1024}KB type={media_type}')
-    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-
-    for model in GEMINI_MODELS:
-        try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}'
-            payload = {
-                'contents': [{'parts': [
-                    {'inline_data': {'mime_type': media_type, 'data': image_b64}},
-                    {'text': GEMINI_PROMPT}
-                ]}],
-                'generationConfig': {'maxOutputTokens': 20, 'temperature': 0.0}
-            }
-            resp = requests.post(url, json=payload, timeout=30)
-            print(f'[GEMINI] {model} status={resp.status_code}')
-
-            if resp.status_code == 400:
-                err = resp.json().get('error', {})
-                print(f'[GEMINI] 400 error: {err.get("message","")[:200]}')
-                # 400 usually means bad image format — try next model
-                continue
-            if resp.status_code == 401:
-                print(f'[GEMINI] 401 INVALID KEY — update GEMINI_API_KEY')
-                return None
-            if resp.status_code == 403:
-                print(f'[GEMINI] 403 KEY BLOCKED/QUOTA — get new key at aistudio.google.com')
-                return None
-            if resp.status_code == 429:
-                print(f'[GEMINI] 429 rate limit')
-                continue
-            if resp.status_code == 404:
-                print(f'[GEMINI] {model} not found, trying next')
-                continue
-            if resp.status_code != 200:
-                print(f'[GEMINI] {resp.status_code}: {resp.text[:200]}')
-                continue
-
-            data       = resp.json()
-            candidates = data.get('candidates', [])
-            if not candidates:
-                print(f'[GEMINI] No candidates in response')
-                continue
-            if candidates[0].get('finishReason') == 'SAFETY':
-                print(f'[GEMINI] Safety filter triggered')
-                continue
-
-            raw_text = candidates[0]['content']['parts'][0]['text']
-            print(f'[GEMINI] Raw response: "{raw_text}"')
-            result = _parse_gemini_response(raw_text)
-            print(f'[GEMINI] Parsed crop: {result}')
-            if result and result in SUPPORTED_CROPS:
-                return result
-
-        except requests.exceptions.Timeout:
-            print(f'[GEMINI] {model} timeout')
-            continue
-        except Exception as e:
-            print(f'[GEMINI ERROR] {model}: {e}')
-            continue
-
-    return None
-
-# Replace ONLY these two things in your routes/ml.py:
-
-# 1. Replace GEMINI_MODELS list with this:
-GEMINI_MODELS = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite', 
-]
-
-# 2. Replace the entire _detect_with_clip function with this:
-def _detect_with_clip(image_bytes):
-    """Uses Hugging Face Inference API with a proper image classification model"""
-    import base64, json
-
-    print(f'[HF] Trying image classification...')
-
-    # Convert to base64
-    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-
-    # Try multiple HuggingFace models
-    HF_MODELS = [
-        'google/vit-base-patch16-224',
-        'microsoft/resnet-50',
-        'facebook/deit-base-distilled-patch16-224',
+    commodity = CROP_TO_AGMARKNET.get(crop_name.lower(), crop_name.title())
+    base_url  = 'https://api.data.gov.in/resource/' + AGMARKNET_RESOURCE_ID
+    filter_attempts = []
+    if user_city:
+        city_lower = user_city.lower()
+        for city_key, markets in MAHARASHTRA_CITY_TO_MARKET.items():
+            if city_key in city_lower or city_lower in city_key:
+                for market in markets[:2]:
+                    filter_attempts.append({
+                        'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 10,
+                        'filters[state.keyword]': 'Maharashtra',
+                        'filters[commodity]': commodity,
+                        'filters[market]': market,
+                    })
+                break
+    filter_attempts += [
+        {'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 100,
+         'filters[state.keyword]': 'Maharashtra', 'filters[commodity]': commodity},
+        {'api-key': AGMARKNET_API_KEY, 'format': 'json', 'limit': 100,
+         'filters[state]': 'Maharashtra', 'filters[commodity]': commodity},
     ]
-
-    for model_id in HF_MODELS:
+    for i, params in enumerate(filter_attempts):
         try:
-            resp = requests.post(
-                f'https://api-inference.huggingface.co/models/{model_id}',
-                headers={'Content-Type': 'application/octet-stream'},
-                data=image_bytes,
-                timeout=20
-            )
-            print(f'[HF] {model_id} status={resp.status_code}')
-
-            if resp.status_code == 503:
-                # Model loading, wait and retry once
-                import time; time.sleep(10)
-                resp = requests.post(
-                    f'https://api-inference.huggingface.co/models/{model_id}',
-                    headers={'Content-Type': 'application/octet-stream'},
-                    data=image_bytes,
-                    timeout=25
-                )
-
-            if resp.status_code != 200:
-                continue
-
-            results = resp.json()
-            if not isinstance(results, list) or not results:
-                continue
-
-            print(f'[HF] Top results: {results[:3]}')
-
-            # Match ImageNet labels to our crops
-            IMAGENET_TO_CROP = {
-                'tomato': 'tomato', 'potato': 'potato', 'onion': 'onion',
-                'corn': 'corn', 'maize': 'corn', 'ear of corn': 'corn',
-                'banana': 'banana', 'apple': 'apple', 'orange': 'orange',
-                'mango': 'mango', 'grapes': 'grapes', 'grape': 'grapes',
-                'cauliflower': 'cauliflower', 'cabbage': 'cabbage',
-                'carrot': 'carrot', 'cucumber': 'cucumber', 'pumpkin': 'pumpkin',
-                'watermelon': 'watermelon', 'papaya': 'papaya',
-                'spinach': 'spinach', 'broccoli': 'cauliflower',
-                'pepper': 'capsicum', 'bell pepper': 'capsicum', 'chili': 'chilli',
-                'ginger': 'ginger', 'garlic': 'garlic', 'strawberry': 'tomato',
-                'lemon': 'orange', 'fig': 'mango', 'jackfruit': 'mango',
-                'wheat': 'wheat', 'rice': 'rice', 'grain': 'wheat',
-                'rose': 'rose', 'sunflower': 'sunflower', 'daisy': 'marigold',
-                'zucchini': 'cucumber', 'acorn squash': 'pumpkin',
-                'butternut squash': 'pumpkin', 'artichoke': 'cauliflower',
-                'head cabbage': 'cabbage', 'brinjal': 'brinjal',
-                'eggplant': 'brinjal', 'aubergine': 'brinjal',
+            resp    = requests.get(base_url, params=params, timeout=10)
+            if resp.status_code != 200: continue
+            records = resp.json().get('records', [])
+            if not records: continue
+            maha_records = [r for r in records if 'maharashtra' in str(r.get('state','')).lower()]
+            if not maha_records: continue
+            local_records = []
+            if user_city:
+                city_lower = user_city.lower()
+                for city_key, markets in MAHARASHTRA_CITY_TO_MARKET.items():
+                    if city_key in city_lower or city_lower in city_key:
+                        mkt_lower = [m.lower() for m in markets]
+                        local_records = [r for r in maha_records if any(m in str(r.get('market','')).lower() for m in mkt_lower)]
+                        break
+            final_records = local_records if local_records else maha_records
+            prices = sorted([(float(r.get('modal_price',0) or 0), r) for r in final_records], key=lambda x: x[0])
+            valid  = [(p, r) for p, r in prices if p > 0]
+            if not valid: continue
+            rec     = valid[len(valid) // 2][1]
+            modal_q = float(rec.get('modal_price', 0) or 0)
+            if modal_q == 0: continue
+            return {
+                'modal_price': round(modal_q / 100, 2),
+                'min_price':   round(float(rec.get('min_price', 0) or 0) / 100, 2),
+                'max_price':   round(float(rec.get('max_price', 0) or 0) / 100, 2),
+                'market':      f"{rec.get('market','')}, {rec.get('district','')}".strip(', ') or 'Maharashtra Mandi',
+                'date':        rec.get('arrival_date', str(datetime.date.today())),
+                'source':      'agmarknet', 'state': rec.get('state', 'Maharashtra'),
             }
-
-            for result in results[:5]:
-                label = result.get('label', '').lower()
-                score = result.get('score', 0)
-                if score < 0.05:
-                    continue
-
-                # Direct match
-                if label in IMAGENET_TO_CROP:
-                    crop = IMAGENET_TO_CROP[label]
-                    print(f'[HF] Matched: {label} -> {crop} (score={score:.3f})')
-                    return crop
-
-                # Partial match against our crops
-                for crop in SUPPORTED_CROPS:
-                    if crop in label:
-                        print(f'[HF] Partial match: {label} -> {crop}')
-                        return crop
-
-                # Partial match against IMAGENET dict keys
-                for key, crop in IMAGENET_TO_CROP.items():
-                    if key in label or label in key:
-                        print(f'[HF] Key match: {label} -> {crop}')
-                        return crop
-
-            print(f'[HF] No crop matched')
-
         except Exception as e:
-            print(f'[HF ERROR] {model_id}: {e}')
-            continue
-
+            print(f'[AGMARKNET] Attempt {i+1} error: {e}')
     return None
+
+
+def get_smart_price(crop_name, season, weather=None, user_city=None):
+    live = fetch_agmarknet_price(crop_name, user_city=user_city)
+    if live:
+        base_price = live['modal_price']
+        source     = 'agmarknet'
+        market     = live['market']
+        mandi_date = live['date']
+        raw_min    = live['min_price']
+        raw_max    = live['max_price']
+    else:
+        base_price = FALLBACK_BASE_PRICES.get(crop_name.lower(), 28)
+        source     = 'local'
+        market     = 'APMC Maharashtra Historical Average'
+        mandi_date = str(datetime.date.today())
+        raw_min    = round(base_price * 0.88, 2)
+        raw_max    = round(base_price * 1.15, 2)
+    multiplier   = SEASON_MULTIPLIER.get(season.lower(), 1.0)
+    weather_adj  = 1.0
+    weather_note = None
+    if weather:
+        if weather.get('humidity', 0) > 75:
+            weather_adj  = 1.08
+            weather_note = f"High humidity ({weather['humidity']}%) -- price up 8%"
+        if weather.get('temp', 0) > 38:
+            weather_adj  = 1.12
+            weather_note = f"Extreme heat ({weather['temp']}C) -- price up 12%"
+    return {
+        'price':        round(base_price * multiplier * weather_adj, 2),
+        'min_price':    round(raw_min    * multiplier * weather_adj, 2),
+        'max_price':    round(raw_max    * multiplier * weather_adj, 2),
+        'base_price':   base_price, 'source': source, 'market': market,
+        'mandi_date':   mandi_date, 'season_mult': multiplier,
+        'weather_adj':  weather_adj, 'weather_note': weather_note,
+    }
 
 
 # ============================================================
@@ -580,7 +426,6 @@ def price_predictor():
                 if len(image_bytes) == 0:
                     file.stream.seek(0)
                     image_bytes = file.stream.read()
-                    print(f'[UPLOAD] Stream fallback size={len(image_bytes)} bytes')
 
                 if len(image_bytes) == 0:
                     ai_failed     = True
@@ -588,7 +433,6 @@ def price_predictor():
                 else:
                     image_bytes, media_type = compress_image(image_bytes)
                     detected = detect_crop_from_image(image_bytes, media_type, fname)
-
                     if detected:
                         detected_crop = detected
                         crop_name     = detected
@@ -596,8 +440,8 @@ def price_predictor():
                         crop_name     = _normalize_crop_name(manual_crop)
                         detected_crop = crop_name
                     else:
-                        ai_failed = True
-                        error_message = 'Could not detect crop from image. Please type the crop name below.'
+                        ai_failed     = True
+                        error_message = 'Could not detect crop. Please type the crop name below.'
 
         if not crop_name and manual_crop:
             crop_name     = _normalize_crop_name(manual_crop)
@@ -631,43 +475,6 @@ def price_predictor():
                            detected_crop=detected_crop,
                            error_message=error_message,
                            ai_failed=ai_failed)
-
-
-# ============================================================
-#  DEBUG ROUTE — visit /debug-vision on your phone to check
-# ============================================================
-@ml.route('/debug-vision')
-def debug_vision():
-    from flask import jsonify
-    key = GEMINI_API_KEY
-    key_status = 'MISSING' if not key else f'Present ({key[:8]}...{key[-4:]})'
-
-    # Quick API test
-    api_test = 'not tested'
-    if key:
-        try:
-            resp = requests.get(
-                f'https://generativelanguage.googleapis.com/v1beta/models?key={key}',
-                timeout=8
-            )
-            if resp.status_code == 200:
-                api_test = '✅ KEY VALID'
-            elif resp.status_code == 400:
-                api_test = '❌ BAD REQUEST'
-            elif resp.status_code == 401:
-                api_test = '❌ INVALID KEY'
-            elif resp.status_code == 403:
-                api_test = '❌ KEY BLOCKED OR QUOTA EXCEEDED'
-            else:
-                api_test = f'❌ HTTP {resp.status_code}'
-        except Exception as e:
-            api_test = f'❌ Connection error: {e}'
-
-    return jsonify({
-        'gemini_key': key_status,
-        'api_test': api_test,
-        'env_vars': {k: '***' for k in os.environ if 'KEY' in k or 'API' in k},
-    })
 
 
 # ============================================================
@@ -734,11 +541,9 @@ def _predict_monthly_prices_ml(crop, target_year_index=3):
 def best_time_to_sell():
     result          = None
     crops_available = list(HISTORICAL_APMC_DATA.keys())
-
     if request.method == 'POST':
         crop     = request.form.get('crop', '').lower()
         quantity = float(request.form.get('quantity', 100))
-
         if crop in HISTORICAL_APMC_DATA:
             prices, method = _predict_monthly_prices_ml(crop)
             if prices:
@@ -765,7 +570,6 @@ def best_time_to_sell():
                     'method': method, 'confidence': confidence, 'data_years': 3,
                     'data_points': len(HISTORICAL_APMC_DATA[crop]),
                 }
-
     return render_template('ml/best_time.html', result=result, crops_available=crops_available)
 
 
@@ -779,10 +583,8 @@ def get_weather_by_coords():
     lon = request.args.get('lon', type=float)
     if not lat or not lon:
         return jsonify({'success': False, 'error': 'No coordinates'})
-
-    weather   = None
+    weather = None
     city_name = None
-
     try:
         resp = requests.get(
             f'https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={WEATHER_API_KEY}&units=metric',
@@ -804,18 +606,14 @@ def get_weather_by_coords():
             }
     except Exception as e:
         print(f'[WEATHER ERROR] {e}')
-
     if not weather:
         try:
             weather = _get_weather_open_meteo(lat, lon)
-            if weather:
-                city_name = weather.get('city', '')
+            if weather: city_name = weather.get('city', '')
         except Exception as e:
             print(f'[OPEN-METEO ERROR] {e}')
-
     if not weather:
         return jsonify({'success': False, 'error': 'Weather unavailable'})
-
     weather['advisory'] = _generate_advisory(weather)
     if city_name:
         city_short = city_name.split(',')[0].strip()
@@ -823,7 +621,6 @@ def get_weather_by_coords():
         session['user_city'] = city_short
     else:
         weather['city_short'] = ''
-
     return jsonify({'success': True, 'weather': weather})
 
 
@@ -881,7 +678,9 @@ def _reverse_geocode_nominatim(lat, lon):
 
 
 def _wmo_desc(code):
-    WMO = {0:'Clear Sky',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',51:'Light Drizzle',61:'Slight Rain',63:'Moderate Rain',65:'Heavy Rain',80:'Rain Showers',95:'Thunderstorm'}
+    WMO = {0:'Clear Sky',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',
+           51:'Light Drizzle',61:'Slight Rain',63:'Moderate Rain',65:'Heavy Rain',
+           80:'Rain Showers',95:'Thunderstorm'}
     return WMO.get(code, 'Variable Conditions')
 
 
@@ -915,4 +714,4 @@ def _generate_advisory(weather):
 
 @ml.route('/test-vision')
 def test_vision():
-    return 'AgroConnect Detection: Gemini Vision (primary) + HuggingFace CLIP (fallback)'
+    return 'AgroConnect Detection: Groq LLaMA Vision (primary)'
