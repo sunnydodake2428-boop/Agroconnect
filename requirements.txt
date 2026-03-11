@@ -1,4 +1,5 @@
-flask
+# Create fresh requirements.txt
+echo "flask
 flask-sqlalchemy
 flask-bcrypt
 scikit-learn
@@ -7,3 +8,5 @@ pandas
 requests
 google-generativeai
 gunicorn
+python-dotenv
+Werkzeug" > requirements.txt
