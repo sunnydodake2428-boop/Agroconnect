@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AgroConnect{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Your CSS -->
+    <link href="/static/css/style.css?v=1772822800" rel="stylesheet">
+
+    <style>
+        .nav-logo-img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .nav-brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .nav-brand-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.55rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+        .nav-brand-text span { color: #2dd4bf; }
+
+        .nav-logout {
+            background: rgba(220,80,60,0.15) !important;
+            color: #ff8f7a !important;
+            padding: 9px 20px !important;
+            border-radius: 100px !important;
+            font-weight: 600 !important;
+            font-size: 0.875rem !important;
+            transition: all 0.2s ease !important;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .nav-logout:hover {
+            background: rgba(220,80,60,0.28) !important;
+            color: #ffb0a0 !important;
+        }
+        .nav-cta {
+            background: linear-gradient(135deg,#16a34a,#22c55e);
+            color: #0a1f12 !important;
+            padding: 10px 22px !important;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .nav-cta:hover {
+            background: #fff;
+            color: #0a1f12 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(91,229,132,0.3);
+        }
+        .navbar-toggler {
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            padding: 8px 12px;
+        }
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        }
+
+        /* ── Checkout Step Progress Bar ── */
+        .checkout-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .checkout-steps .step {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            background: #f3f4f6;
+            white-space: nowrap;
+        }
+        .checkout-steps .step.active {
+            background: #16a34a;
+            color: #fff;
+        }
+        .checkout-steps .step.done {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .checkout-steps .step-line {
+            flex: 1;
+            height: 2px;
+            background: #e5e7eb;
+            max-width: 60px;
+        }
+        .checkout-steps .step-line.done {
+            background: #16a34a;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===================== NAVBAR ===================== -->
+<nav class="navbar navbar-expand-lg"
+     style="background:rgba(7,18,9,0.94); padding:0; position:sticky; top:0; z-index:999;
+            border-bottom:1px solid rgba(91,229,132,0.12); backdrop-filter:blur(24px);">
+    <div class="container" style="padding-top:14px; padding-bottom:14px;">
+
+        <!-- LOGO -->
+        <a href="/" class="nav-brand-wrap">
+            <img src="/static/images/logo.png" alt="AgroConnect Logo"
+                 class="nav-logo-img" onerror="this.style.display='none'">
+            <span class="nav-brand-text">Agro<span>Connect</span></span>
+        </a>
+
+        <!-- MOBILE TOGGLE -->
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- NAV LINKS -->
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto align-items-center gap-1 mt-3 mt-lg-0">
+
+                {% if session.user_role == 'farmer' %}
+                <!-- ── FARMER ── -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/">{{ t('nav_home') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/farmer/dashboard">{{ t('nav_dashboard') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/farmer/add-listing">
+                        <i class="fas fa-plus me-1" style="font-size:0.75rem;"></i>{{ t('nav_add_crop') }}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/price-predictor">{{ t('nav_price') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/best-time-to-sell">{{ t('nav_best_time') }}</a>
+                </li>
+                <li class="nav-item ms-2">
+                    <a href="/logout" class="nav-logout">{{ t('nav_logout') }}</a>
+                </li>
+
+                {% elif session.user_role == 'buyer' %}
+                <!-- ── BUYER ── -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/">{{ t('nav_home') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/marketplace">{{ t('nav_marketplace') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/buyer/dashboard">{{ t('nav_my_orders') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('buyer.cart') }}">
+                        <i class="fas fa-shopping-cart me-1" style="font-size:0.8rem;"></i>
+                        {{ t('nav_cart') }}
+                        {# Optional cart count badge #}
+                        {% if cart_count is defined and cart_count > 0 %}
+                        <span class="badge bg-success ms-1" style="font-size:0.65rem;">{{ cart_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('buyer.my_orders') }}">
+                        <i class="fas fa-box me-1" style="font-size:0.8rem;"></i>My Orders
+                    </a>
+                </li>
+                <li class="nav-item ms-2">
+                    <a href="/logout" class="nav-logout">{{ t('nav_logout') }}</a>
+                </li>
+
+                {% elif session.user_role == 'admin' %}
+                <!-- ── ADMIN ── -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/">{{ t('nav_home') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/dashboard">{{ t('nav_admin') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/marketplace">{{ t('nav_marketplace') }}</a>
+                </li>
+                <li class="nav-item ms-2">
+                    <a href="/logout" class="nav-logout">{{ t('nav_logout') }}</a>
+                </li>
+
+                {% else %}
+                <!-- ── GUEST ── -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/">{{ t('nav_home') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/marketplace">{{ t('nav_marketplace') }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/login">{{ t('nav_login') }}</a>
+                </li>
+                <li class="nav-item ms-2">
+                    <a href="/register" class="nav-cta">{{ t('nav_get_started') }}</a>
+                </li>
+                {% endif %}
+
+                <!-- ── LANGUAGE SWITCHER ── -->
+                <li class="nav-item ms-2">
+                    <div style="display:flex;align-items:center;gap:2px;
+                                background:rgba(255,255,255,0.07);
+                                border:1px solid rgba(255,255,255,0.12);
+                                border-radius:100px;padding:4px 5px;">
+                        <a href="/set-language/mr" style="font-size:0.7rem;font-weight:700;padding:5px 9px;border-radius:100px;text-decoration:none;transition:all 0.2s;font-family:'Noto Sans Devanagari',sans-serif;
+                           {% if current_lang=='mr' %}background:#3dba61;color:#0a1f12;{% else %}background:transparent;color:rgba(255,255,255,0.4);{% endif %}">मर</a>
+                        <a href="/set-language/hi" style="font-size:0.7rem;font-weight:700;padding:5px 9px;border-radius:100px;text-decoration:none;transition:all 0.2s;font-family:'Noto Sans Devanagari',sans-serif;
+                           {% if current_lang=='hi' %}background:#3dba61;color:#0a1f12;{% else %}background:transparent;color:rgba(255,255,255,0.4);{% endif %}">हि</a>
+                        <a href="/set-language/en" style="font-size:0.7rem;font-weight:700;padding:5px 9px;border-radius:100px;text-decoration:none;transition:all 0.2s;
+                           {% if current_lang=='en' %}background:#3dba61;color:#0a1f12;{% else %}background:transparent;color:rgba(255,255,255,0.4);{% endif %}">EN</a>
+                    </div>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ===================== FLASH MESSAGES ===================== -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="container mt-3">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ===================== PAGE CONTENT ===================== -->
+{% block content %}{% endblock %}
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+    <div class="container">
+        <div class="row g-5">
+
+            <!-- Brand -->
+            <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <img src="/static/images/logo.png" alt="AgroConnect"
+                         style="width:36px;height:36px;object-fit:contain;border-radius:8px;"
+                         onerror="this.style.display='none'">
+                    <div class="footer-logo" style="margin:0;">Agro<span>Connect</span></div>
+                </div>
+                <p class="footer-desc">{{ t('footer_tagline') }}</p>
+                <div class="d-flex gap-3 mt-4">
+                    {% for icon in ['twitter', 'instagram', 'linkedin'] %}
+                    <a href="#" style="width:36px;height:36px;background:rgba(255,255,255,0.07);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.45);font-size:0.85rem;transition:all 0.2s;text-decoration:none;"
+                       onmouseover="this.style.background='rgba(91,229,132,0.2)';this.style.color='#4aad6f';"
+                       onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(255,255,255,0.45)';">
+                        <i class="fab fa-{{ icon }}"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Platform Links -->
+            <div class="col-6 col-lg-2">
+                <div class="footer-head">Platform</div>
+                <a href="/marketplace" class="footer-link">{{ t('nav_marketplace') }}</a>
+                <a href="/price-predictor" class="footer-link">{{ t('nav_price') }}</a>
+                <a href="/best-time-to-sell" class="footer-link">{{ t('nav_best_time') }}</a>
+                <a href="/register" class="footer-link">Join as Farmer</a>
+                <a href="/login" class="footer-link">{{ t('nav_login') }}</a>
+            </div>
+
+            <!-- Categories -->
+            <div class="col-6 col-lg-2">
+                <div class="footer-head">Categories</div>
+                {% for cat in ['vegetables','fruits','grains','flowers','spices'] %}
+                <a href="/marketplace?category={{ cat }}" class="footer-link">{{ cat|capitalize }}</a>
+                {% endfor %}
+            </div>
+
+            <!-- Impact + Contact -->
+            <div class="col-lg-4">
+                <div class="footer-head">Our Impact</div>
+                <div style="background:rgba(91,229,132,0.08);border:1px solid rgba(91,229,132,0.15);border-radius:16px;padding:20px;">
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:#fff;line-height:1;">600M<span style="color:#5be584;font-size:1rem;">+</span></div>
+                            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-weight:600;">Farmers</div>
+                        </div>
+                        <div class="col-6">
+                            <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:#fff;line-height:1;">0<span style="color:#5be584;font-size:1rem;">₹</span></div>
+                            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-weight:600;">Commission</div>
+                        </div>
+                        <div class="col-6">
+                            <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:#fff;line-height:1;">3<span style="color:#e07b3f;font-size:1rem;">×</span></div>
+                            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-weight:600;">More Income</div>
+                        </div>
+                        <div class="col-6">
+                            <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:#fff;line-height:1;">AI</div>
+                            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-weight:600;">Powered</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:16px;font-size:0.82rem;color:rgba(255,255,255,0.3);line-height:1.6;">
+                    <i class="fas fa-map-marker-alt me-2" style="color:#5be584;"></i>Maharashtra, India<br>
+                    <i class="fas fa-envelope me-2" style="color:#5be584;display:inline-block;margin-top:8px;"></i>hello@agroconnect.in
+                </div>
+            </div>
+
+        </div>
+
+        <hr class="footer-hr">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="footer-copy">{{ t('footer_copy') }}</div>
+            <div class="footer-copy">Eliminating middlemen since 2026</div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

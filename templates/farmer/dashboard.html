@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('farmer_dash_title') }} — AgroConnect{% endblock %}
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">{{ t('farmer_dash_title') }}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-top:4px;">
+      <div>
+        <h2 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:4px;">{{ t('good_day') }}, {{ session.user_name }} 🌾</h2>
+        <p>{{ t('farm_overview') }}</p>
+      </div>
+      <a href="/farmer/add-listing" class="btn-green" style="border-radius:var(--r-pill);padding:12px 24px;">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        Add New Crop
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page-body">
+  <div class="container">
+
+    <!-- STAT CARDS pulled up -->
+    <div class="row g-3 stats-pull">
+      {% set completed_count = orders|selectattr('status','equalto','delivered')|list|length %}
+      {% set inprogress_count = orders|selectattr('status','in',['pending','confirmed','dispatched'])|list|length %}
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Total Orders</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="stat-value">{{ orders|length }}</div>
+            <div class="stat-icon icon-blue">📦</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Completed</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="stat-value">{{ completed_count }}</div>
+            <div class="stat-icon icon-green">✅</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">In Progress</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="stat-value">{{ inprogress_count }}</div>
+            <div class="stat-icon icon-amber">⏳</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Total Earnings</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="stat-value" style="font-size:1.7rem;color:var(--accent-3);">₹{{ total_earnings or 0 }}</div>
+            <div class="stat-icon icon-teal">💰</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;">
+      <a href="/farmer/add-listing" class="btn-green" style="border-radius:var(--r-md);">
+        <i class="fas fa-plus" style="font-size:0.78rem;"></i> {{ t('add_new_crop') }}
+      </a>
+      <a href="/price-predictor" class="btn-outline">📈 Price Predictor</a>
+      <a href="/best-time-to-sell" class="btn-outline">📊 Best Time to Sell</a>
+    </div>
+
+    <!-- ══ ORDERS TABLE ══ -->
+    <div class="panel mb-4">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Orders</div>
+          <div style="font-size:0.78rem;color:var(--txt-300);margin-top:2px;">Manage and track all your orders</div>
+        </div>
+        <button class="btn-mint" style="border-radius:var(--r-md);padding:9px 18px;font-size:0.82rem;">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export Orders
+        </button>
+      </div>
+
+      <!-- Search + filters -->
+      <div style="padding:16px 24px;display:flex;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <div class="search-wrap" style="flex:1;min-width:240px;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="#8aab92" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="#8aab92" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input type="text" placeholder="Search by order ID, buyer, or crop..." oninput="filterOrderTable(this.value)">
+        </div>
+        <button class="btn-outline" style="padding:9px 18px;font-size:0.84rem;border-radius:var(--r-sm);">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Filters
+        </button>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        {% for tab in ['All Orders','Pending','Completed','Cancelled'] %}
+        <button class="tab-btn {% if loop.first %}active{% endif %}"
+                id="otab_{{ tab|replace(' ','_') }}"
+                onclick="filterOrderTab('{{ tab }}', this)">{{ tab }}</button>
+        {% endfor %}
+      </div>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="data-table" id="ordersTable">
+          <thead>
+            <tr>
+              <th>Order</th><th>Buyer</th><th>Crop</th>
+              <th>Quantity</th><th>Amount</th><th>Status</th>
+              <th>Payment</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if orders %}
+              {% for order in orders %}
+              {% set av_colors = ['av-teal','av-green','av-blue','av-amber','av-purple','av-red'] %}
+              <tr class="order-row" data-status="{{ order.status }}">
+                <td>
+                  <div style="font-size:0.90rem;font-weight:700;color:var(--txt-900);">ORD-{{ '%03d'%order.order_id }}</div>
+                  <div style="font-size:0.72rem;color:var(--txt-300);margin-top:2px;">{{ order.created_at.strftime('%Y-%m-%d') }}</div>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="avatar {{ av_colors[loop.index0 % 6] }}">
+                      {{ order.buyer.name[:2]|upper }}
+                    </div>
+                    <span style="font-size:0.90rem;font-weight:600;color:var(--txt-900);">{{ order.buyer.name }}</span>
+                  </div>
+                </td>
+                <td style="font-size:0.90rem;color:var(--txt-500);font-weight:500;">{{ order.product.crop_name }}</td>
+                <td style="font-size:0.90rem;color:var(--txt-500);">{{ order.quantity }} {{ order.product.unit }}</td>
+                <td><span style="font-size:0.95rem;font-weight:700;color:var(--accent-3);">₹{{ order.total_price }}</span></td>
+                <td>
+                  <span class="badge-status badge-{{ order.status }}">{{ order.status|capitalize }}</span>
+                </td>
+                <td>
+                  <span style="font-size:0.88rem;font-weight:600;{% if order.status=='delivered' %}color:var(--s-green);{% else %}color:var(--s-amber);{% endif %}">
+                    {% if order.status=='delivered' %}Paid{% else %}Pending{% endif %}
+                  </span>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    {% if order.status=='pending' %}
+                    <a href="/farmer/update-order/{{ order.order_id }}/confirmed" style="font-size:0.78rem;font-weight:700;color:var(--s-green);text-decoration:none;padding:6px 12px;border-radius:var(--r-sm);background:var(--bg-green);border:1px solid #bbf7d0;transition:all 0.15s;white-space:nowrap;">✓ Confirm</a>
+                    {% elif order.status=='confirmed' %}
+                    <a href="/farmer/update-order/{{ order.order_id }}/dispatched" style="font-size:0.78rem;font-weight:700;color:var(--s-blue);text-decoration:none;padding:6px 12px;border-radius:var(--r-sm);background:var(--bg-blue);border:1px solid #bfdbfe;transition:all 0.15s;white-space:nowrap;">🚚 Dispatch</a>
+                    {% elif order.status=='dispatched' %}
+                    <a href="/farmer/update-order/{{ order.order_id }}/delivered" style="font-size:0.78rem;font-weight:700;color:var(--accent-3);text-decoration:none;padding:6px 12px;border-radius:var(--r-sm);background:var(--bg-teal);border:1px solid rgba(45,212,191,0.30);transition:all 0.15s;white-space:nowrap;">✅ Deliver</a>
+                    {% else %}
+                    <span style="font-size:0.78rem;color:var(--txt-300);">Complete</span>
+                    {% endif %}
+                    <button class="btn-ghost" style="font-size:0.78rem;padding:5px 10px;border-radius:var(--r-sm);">👁 View</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr><td colspan="8" style="text-align:center;padding:60px 20px;">
+              <div style="font-size:2.5rem;margin-bottom:14px;">📋</div>
+              <p style="color:var(--txt-300);margin-bottom:20px;">{{ t('no_orders') }}</p>
+              <a href="/farmer/add-listing" class="btn-green" style="border-radius:var(--r-pill);">Add Your First Crop</a>
+            </td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ ACTIVE LISTINGS ══ -->
+    <div class="panel mb-4">
+      <div class="panel-header">
+        <div class="panel-title">{{ t('active_listings') }}</div>
+        <a href="/farmer/add-listing" class="btn-outline" style="font-size:0.82rem;padding:8px 16px;border-radius:var(--r-sm);">+ Add Crop</a>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr>
+            <th>Crop</th><th>Category</th><th>Quantity</th>
+            <th>Price</th><th>Status</th><th>Listed On</th>
+          </tr></thead>
+          <tbody>
+            {% if listings %}
+              {% for item in listings %}
+              <tr>
+                <td style="font-size:0.92rem;font-weight:700;color:var(--txt-900);">{{ item.crop_name }}</td>
+                <td style="font-size:0.88rem;color:var(--txt-300);">{{ item.category or '—' }}</td>
+                <td style="font-size:0.88rem;color:var(--txt-500);">{{ item.quantity }} {{ item.unit }}</td>
+                <td style="font-size:0.90rem;font-weight:700;color:var(--accent-3);">₹{{ item.price }}</td>
+                <td><span class="badge-status badge-{{ item.status }}">{{ item.status }}</span></td>
+                <td style="font-size:0.80rem;color:var(--txt-300);">{{ item.created_at.strftime('%d %b %Y') }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;padding:52px 20px;">
+              <div style="font-size:2rem;margin-bottom:12px;">🌱</div>
+              <p style="color:var(--txt-300);margin-bottom:18px;">No listings yet.</p>
+              <a href="/farmer/add-listing" class="btn-green" style="border-radius:var(--r-pill);">Add Your First Crop</a>
+            </td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ MIDDLEMAN CALCULATOR ══ -->
+    <div style="background:linear-gradient(135deg,#071209 0%,#0d2a18 60%,#0f3320 100%);border-radius:var(--r-xl);padding:32px;border:1px solid rgba(45,212,191,0.15);position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,191,0.10) 0%,transparent 70%);pointer-events:none;"></div>
+      <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.14em;color:rgba(255,255,255,0.35);margin-bottom:18px;font-weight:700;">Middleman Elimination Calculator</div>
+      <div class="row align-items-center g-4">
+        <div class="col-md-8">
+          <div class="row text-center g-3">
+            {% for label,val,col in [('Mandi Price','₹8','rgba(239,68,68,0.12)'),('AgroConnect','₹28','rgba(45,212,191,0.12)'),('You Save','₹20','rgba(245,158,11,0.10)')] %}
+            <div class="col-4">
+              <div style="background:{{ col }};border-radius:14px;padding:18px 10px;{% if loop.index==2 %}border:1px solid rgba(45,212,191,0.25);{% endif %}">
+                <div style="font-size:0.68rem;color:rgba(255,255,255,0.40);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:8px;font-weight:700;">{{ label }}</div>
+                <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:400;color:{% if loop.index==1 %}#fca5a5{% elif loop.index==2 %}#2dd4bf{% else %}#fcd34d{% endif %};letter-spacing:-0.03em;">{{ val }}</div>
+                <div style="font-size:0.70rem;color:rgba(255,255,255,0.30);margin-top:4px;">per kg</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-4 text-center">
+          <div style="font-family:'Fraunces',serif;font-size:3.8rem;font-weight:300;color:#fcd34d;letter-spacing:-0.04em;line-height:1;">250%</div>
+          <div style="font-size:0.90rem;color:rgba(255,255,255,0.60);margin-top:6px;">More income on AgroConnect</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.28);margin-top:4px;">vs traditional mandi system</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function filterOrderTab(status, el) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.order-row').forEach(row => {
+    const s = row.dataset.status;
+    row.style.display = (status==='All Orders'
+      || (status==='Pending' && (s==='pending'||s==='confirmed'))
+      || (status==='Completed' && s==='delivered')
+      || (status==='Cancelled' && s==='cancelled')) ? '' : 'none';
+  });
+}
+function filterOrderTable(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.order-row').forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Step Bar -->
+  <div class="checkout-steps mb-4">
+    <div class="step done">✓ Cart</div>
+    <div class="step-line done"></div>
+    <div class="step done">✓ Address</div>
+    <div class="step-line done"></div>
+    <div class="step active">💳 Payment</div>
+    <div class="step-line"></div>
+    <div class="step">✅ Done</div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <h5 class="fw-bold mb-3">💳 Choose Payment Method</h5>
+
+      <form method="POST" action="{{ url_for('buyer.place_order') }}">
+        <!-- UPI -->
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="payment_method" value="upi" id="upi" checked>
+              <label class="form-check-label fw-bold" for="upi">📱 UPI Payment</label>
+              <small class="text-muted d-block ms-4">Google Pay, PhonePe, Paytm, BHIM</small>
+            </div>
+            <div class="ms-4">
+              <input type="text" name="upi_id" class="form-control w-50" placeholder="yourname@upi">
+              <div class="d-flex gap-2 mt-2">
+                {% for app in ['Google Pay', 'PhonePe', 'Paytm'] %}
+                <button type="button" class="btn btn-outline-success btn-sm">{{ app }}</button>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card -->
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="payment_method" value="card" id="card">
+              <label class="form-check-label fw-bold" for="card">💳 Credit / Debit Card</label>
+              <small class="text-muted d-block ms-4">Visa, Mastercard, RuPay</small>
+            </div>
+            <div class="ms-4 row g-2">
+              <div class="col-12">
+                <input type="text" name="card_number" class="form-control" placeholder="Card Number" maxlength="19">
+              </div>
+              <div class="col-12">
+                <input type="text" name="card_name" class="form-control" placeholder="Name on Card">
+              </div>
+              <div class="col-6">
+                <input type="text" name="card_exp" class="form-control" placeholder="MM/YY" maxlength="5">
+              </div>
+              <div class="col-6">
+                <input type="password" name="card_cvv" class="form-control" placeholder="CVV" maxlength="3">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COD -->
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="payment_method" value="cod" id="cod">
+              <label class="form-check-label fw-bold" for="cod">💵 Cash on Delivery</label>
+              <small class="text-muted d-block ms-4">Pay when your order arrives</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Net Banking -->
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="payment_method" value="netbanking" id="nb">
+              <label class="form-check-label fw-bold" for="nb">🏦 Net Banking</label>
+            </div>
+            <div class="ms-4">
+              <select name="bank" class="form-select w-50">
+                <option>Select Your Bank</option>
+                {% for bank in ['State Bank of India','HDFC Bank','ICICI Bank','Axis Bank','Bank of Baroda'] %}
+                <option>{{ bank }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Note -->
+        <div class="alert alert-success py-2" style="font-size:13px;">
+          🔒 Your payment is encrypted with 256-bit SSL. We never store card details.
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('buyer.checkout_address') }}" class="btn btn-outline-secondary">← Back</a>
+          <button type="submit" class="btn btn-success fw-bold flex-grow-1">
+            Place Order — ₹{{ total|int }} →
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Price Summary Sidebar -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">🧾 Price Details</div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span>₹{{ subtotal|int }}</span></div>
+          {% if coupon_discount > 0 %}
+          <div class="d-flex justify-content-between mb-2 text-success">
+            <span>Coupon ({{ coupon.code }})</span><span>−₹{{ coupon_discount|int }}</span>
+          </div>
+          {% endif %}
+          <div class="d-flex justify-content-between mb-2">
+            <span>Delivery</span>
+            <span class="{{ 'text-success fw-bold' if delivery == 0 }}">{{ 'FREE' if delivery == 0 else '₹'~delivery }}</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5">
+            <span>Total</span><span class="text-success">₹{{ total|int }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body" style="font-size:13px;">
+          <div class="mb-2">📍 <strong>Delivering to:</strong></div>
+          <div class="text-muted">
+            {{ address.full_name }}<br>
+            {{ address.line1 }}, {{ address.city }} — {{ address.pincode }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

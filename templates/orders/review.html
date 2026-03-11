@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Write a Review — AgroConnect{% endblock %}
+{% block content %}
+
+<section style="background:#f9f6f0; min-height:100vh; padding:80px 0;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+
+                <div style="text-align:center; margin-bottom:32px;">
+                    <div style="font-family:'Playfair Display',serif; font-size:2rem; font-weight:900; color:#fff;">
+                        Leave a Review
+                    </div>
+                    <p style="color:rgba(255,255,255,0.45); margin-top:8px;">
+                        Share your experience with this purchase
+                    </p>
+                </div>
+
+                {% if order %}
+                <div style="background:#162d1b; border:1px solid #e8e2d6; border-radius:16px; padding:24px; margin-bottom:24px;">
+                    <div style="font-size:0.8rem; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.1em; font-weight:600; margin-bottom:8px;">Order Details</div>
+                    <div style="font-size:1rem; font-weight:700; color:#fff;">{{ order.product.crop_name }}</div>
+                    <div style="font-size:0.875rem; color:rgba(255,255,255,0.45); margin-top:4px;">
+                        Qty: {{ order.quantity }} {{ order.product.unit }} &nbsp;·&nbsp; ₹{{ order.total_price }}
+                    </div>
+                    <div style="font-size:0.875rem; color:rgba(255,255,255,0.45); margin-top:4px;">
+                        Farmer: {{ order.farmer.name }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div style="background:#162d1b; border:1px solid #e8e2d6; border-radius:20px; padding:32px;">
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label style="font-weight:600; color:#fff; margin-bottom:8px; display:block;">Rating</label>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                {% for i in range(1, 6) %}
+                                <label style="cursor:pointer; display:flex; align-items:center; gap:6px; padding:10px 16px; border:1px solid #e8e2d6; border-radius:100px; font-size:0.875rem; font-weight:600; color:#fff; transition:all 0.2s;">
+                                    <input type="radio" name="rating" value="{{ i }}" required style="display:none;">
+                                    <span>{{ '⭐' * i }}</span>
+                                    <span>{{ i }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label style="font-weight:600; color:#fff; margin-bottom:8px; display:block;">Your Comments</label>
+                            <textarea name="comment" rows="4"
+                                      placeholder="How was the quality? Was delivery on time? Any feedback for the farmer..."
+                                      style="width:100%; padding:14px 16px; border:1px solid #d8d2c6; border-radius:12px; font-size:0.9rem; resize:vertical; font-family:inherit; outline:none; color:#fff;"
+                                      required></textarea>
+                        </div>
+
+                        <button type="submit" style="width:100%; background:#2d7a4f; color:#fff; border:none; border-radius:100px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.2s;">
+                            Submit Review →
+                        </button>
+                    </form>
+                </div>
+
+                <div style="text-align:center; margin-top:20px;">
+                    <a href="/buyer/dashboard" style="color:rgba(255,255,255,0.45); font-size:0.875rem; text-decoration:none;">
+                        ← Back to Dashboard
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.querySelectorAll('input[name="rating"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('input[name="rating"]').forEach(function(r) {
+            r.parentElement.style.borderColor = '#e8e2d6';
+            r.parentElement.style.background = '#fff';
+        });
+        if (this.checked) {
+            this.parentElement.style.borderColor = '#2d7a4f';
+            this.parentElement.style.background = '#f0faf4';
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Shopping Cart — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">Checkout</div>
+    <h2 style="font-size:2rem;margin-bottom:4px;">{{ t('cart_title') }}</h2>
+    <p>{% if cart_items %}{{ cart_items|length }} item{{ 's' if cart_items|length!=1 else '' }} in your cart{% else %}Your cart is empty{% endif %}</p>
+  </div>
+</div>
+
+<div class="page-body" style="padding-top:32px;">
+  <div class="container">
+    {% if cart_items %}
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="panel">
+          {% for item in cart_items %}
+          <div class="cart-item">
+            <img src="/static/images/{{ item.product.image }}" alt="{{ item.product.crop_name }}"
+                 onerror="this.src='https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200'"
+                 style="width:82px;height:82px;object-fit:cover;border-radius:var(--r-md);flex-shrink:0;border:1px solid var(--border);">
+            <div style="flex:1;">
+              <h6 style="font-size:0.98rem;font-weight:700;color:var(--txt-900);margin:0 0 4px;">{{ item.product.crop_name }}</h6>
+              <div style="font-size:0.78rem;color:var(--txt-300);margin-bottom:4px;">by {{ item.product.farmer.name }}</div>
+              <div style="font-size:0.74rem;color:var(--txt-200);">Minimum order: 10 {{ item.product.unit }}</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                <button type="button" class="btn-outline" style="width:28px;height:28px;padding:0;border-radius:var(--r-sm);justify-content:center;font-size:1rem;font-weight:600;">−</button>
+                <span style="font-size:0.92rem;font-weight:700;color:var(--txt-900);min-width:55px;text-align:center;">{{ item.quantity }} {{ item.product.unit }}</span>
+                <button type="button" class="btn-outline" style="width:28px;height:28px;padding:0;border-radius:var(--r-sm);justify-content:center;font-size:1rem;font-weight:600;">+</button>
+              </div>
+            </div>
+            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+              <a href="/remove-from-cart/{{ item.cart_id }}" style="color:var(--s-red);opacity:0.50;text-decoration:none;font-size:1.1rem;transition:opacity 0.18s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.50'">🗑</a>
+              <div style="font-size:0.74rem;color:var(--txt-300);">₹{{ item.product.price }}/{{ item.product.unit }}</div>
+              <div style="font-family:'Fraunces',serif;font-size:1.25rem;font-weight:400;color:var(--accent-3);">₹{{ (item.product.price*item.quantity)|round|int }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="col-lg-4">
+        <div class="panel" style="padding:26px;">
+          <div class="panel-title" style="margin-bottom:22px;">{{ t('order_summary') }}</div>
+          <div style="display:flex;gap:8px;margin-bottom:22px;">
+            <div class="search-wrap" style="flex:1;">
+              <span style="color:var(--txt-300);font-size:0.88rem;">🏷</span>
+              <input type="text" placeholder="Coupon code">
+            </div>
+            <button style="background:var(--bg-amber);color:#d97706;border:1.5px solid #fde68a;border-radius:var(--r-sm);padding:0 18px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.18s;" onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='var(--bg-amber)'">Apply</button>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:18px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:0.88rem;color:var(--txt-400);">{{ t('subtotal') }}</span>
+              <span style="font-size:0.92rem;font-weight:600;color:var(--txt-900);">₹{{ total }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px;">
+              <span style="font-size:0.88rem;color:var(--txt-400);">Shipping</span>
+              <span style="font-size:0.92rem;font-weight:700;color:var(--s-green);">FREE</span>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+              <strong style="font-size:1rem;color:var(--txt-900);">Total</strong>
+              <strong style="font-family:'Fraunces',serif;font-size:1.7rem;font-weight:400;color:var(--accent-3);letter-spacing:-0.02em;">₹{{ total }}</strong>
+            </div>
+            <form method="POST" action="/place-order">
+              <div class="field-wrap">
+                <label class="field-label">{{ t('delivery_address') }}</label>
+                <textarea name="delivery_address" rows="3" required placeholder="{{ t('delivery_ph') }}" class="field-input field-textarea" style="min-height:80px;"></textarea>
+              </div>
+              <button type="submit" style="width:100%;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;border-radius:var(--r-pill);padding:15px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 6px 20px rgba(245,158,11,0.35);transition:all 0.2s;letter-spacing:0.01em;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 28px rgba(245,158,11,0.45)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(245,158,11,0.35)'">
+                {{ t('place_order') }} →
+              </button>
+              <a href="/marketplace" class="btn-outline" style="width:100%;justify-content:center;margin-top:10px;border-radius:var(--r-pill);">Continue Shopping</a>
+            </form>
+          </div>
+          <div style="background:var(--mint-50);border-radius:var(--r-md);padding:16px;margin-top:18px;border:1px solid var(--border);">
+            <div style="font-size:0.80rem;font-weight:700;color:var(--txt-700);margin-bottom:10px;">Why buy from us?</div>
+            {% for item in ['Direct from farmers, best prices','Farm fresh quality guaranteed','Fast & reliable delivery'] %}
+            <div style="font-size:0.78rem;color:var(--txt-500);margin-bottom:7px;display:flex;align-items:center;gap:8px;">
+              <span style="color:var(--accent);font-weight:700;">✓</span> {{ item }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:80px 20px;">
+      <div style="font-size:3.5rem;margin-bottom:18px;">🛒</div>
+      <h5 style="font-family:'Fraunces',serif;font-size:1.5rem;margin-bottom:8px;color:var(--txt-900);">{{ t('cart_empty') }}</h5>
+      <p style="color:var(--txt-300);font-size:0.9rem;margin-bottom:28px;">Browse fresh crops from verified farmers</p>
+      <a href="/marketplace" class="btn-green" style="border-radius:var(--r-pill);padding:14px 32px;">{{ t('browse_marketplace') }}</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

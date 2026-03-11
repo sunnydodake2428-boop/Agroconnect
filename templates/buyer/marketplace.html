@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Marketplace — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">Browse</div>
+    <h1 style="font-size:2.2rem;margin-bottom:6px;">{{ t('market_title') }}</h1>
+    <p style="margin-bottom:28px;">{{ t('market_subtitle') }}</p>
+
+    <form method="GET" action="/marketplace" id="searchForm">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;max-width:800px;">
+        <div class="search-wrap" style="flex:1;min-width:240px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="rgba(255,255,255,0.45)" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="rgba(255,255,255,0.45)" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input type="text" name="search" id="searchInput" value="{{ search }}" placeholder="{{ t('search_ph') }}" style="color:#fff;">
+        </div>
+        <select name="category" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:var(--r-sm);padding:0 36px 0 14px;color:#fff;font-size:0.88rem;outline:none;cursor:pointer;font-family:inherit;min-width:150px;appearance:none;" onchange="this.form.submit()">
+          <option value="" style="background:#0d2a18;" {% if not request.args.get('category') %}selected{% endif %}>All Categories</option>
+          {% for val,lbl in [('vegetables','Vegetables'),('fruits','Fruits'),('grains','Grains'),('flowers','Flowers'),('dairy','Dairy'),('spices','Spices')] %}
+          <option value="{{ val }}" style="background:#0d2a18;" {% if request.args.get('category')==val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" onclick="startVoiceSearch()" title="Voice Search" style="width:46px;height:46px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:var(--r-sm);cursor:pointer;font-size:1.05rem;flex-shrink:0;transition:all 0.18s;" onmouseover="this.style.background='rgba(45,212,191,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">🎤</button>
+      </div>
+      <div id="voiceStatus" style="color:rgba(45,212,191,0.75);font-size:0.80rem;margin-top:8px;min-height:18px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">
+        {% for cat,emoji in [('','All'),('vegetables','🥦 Vegetables'),('fruits','🍎 Fruits'),('grains','🌾 Grains'),('flowers','🌸 Flowers'),('dairy','🥛 Dairy'),('spices','🌶 Spices')] %}
+        <a href="/marketplace{% if cat %}?category={{ cat }}{% endif %}" class="cat-pill {% if (not cat and not request.args.get('category')) or request.args.get('category')==cat %}active{% endif %}">{{ emoji }}</a>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="page-body" style="padding-top:32px;">
+  <div class="container">
+    <p style="font-size:0.84rem;color:var(--txt-300);margin-bottom:24px;">
+      Showing <strong style="color:var(--txt-900);">{{ products|length }}</strong> product{{ 's' if products|length!=1 else '' }}{% if search %} &middot; matching "{{ search }}"{% endif %}
+    </p>
+
+    {% if products %}
+    <div class="row g-4">
+      {% for product in products %}
+      <div class="col-6 col-md-4">
+        <div class="product-card">
+          <div style="position:relative;overflow:hidden;">
+            <img class="product-card-img" src="/static/images/{{ product.image }}" alt="{{ product.crop_name }}"
+                 onerror="this.src='https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400'">
+            {% if product.category in ['vegetables','fruits'] %}
+            <div style="position:absolute;top:12px;left:12px;background:var(--accent);color:#0a1f12;font-size:0.63rem;font-weight:800;padding:4px 10px;border-radius:var(--r-pill);letter-spacing:0.05em;">✦ Organic</div>
+            {% endif %}
+            <div style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.95);color:var(--txt-900);font-size:0.72rem;font-weight:700;padding:4px 9px;border-radius:var(--r-pill);display:flex;align-items:center;gap:4px;">
+              <span style="color:#f59e0b;">★</span> {{ (4.5+loop.index0*0.1)|round(1) }}
+            </div>
+          </div>
+          <div class="product-card-body">
+            <h5 style="font-size:1rem;font-weight:700;color:var(--txt-900);margin:0 0 6px;">{{ product.crop_name }}</h5>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <div class="avatar av-green" style="width:26px;height:26px;font-size:0.65rem;">
+                {{ product.farmer.name[0]|upper }}{{ product.farmer.name.split(' ')[1][0]|upper if product.farmer.name.split(' ')|length>1 else '' }}
+              </div>
+              <div>
+                <div style="font-size:0.78rem;font-weight:600;color:var(--txt-500);">{{ product.farmer.name }}</div>
+                <div style="font-size:0.68rem;color:var(--txt-300);">@ {{ product.farmer.location or 'Maharashtra' }}</div>
+              </div>
+            </div>
+            <div style="font-size:0.74rem;color:var(--txt-300);margin-bottom:14px;">Min. order: 10 kg &bull; {{ product.quantity|int }} {{ product.unit }} available</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:16px;">
+              <span style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:400;color:var(--txt-900);letter-spacing:-0.03em;">₹{{ product.price|int }}</span>
+              <span style="font-size:0.78rem;color:var(--txt-300);">per {{ product.unit }}</span>
+            </div>
+            {% if session.user_role == 'buyer' %}
+            <form method="POST" action="/add-to-cart/{{ product.product_id }}" style="margin-top:auto;">
+              <div style="display:flex;gap:8px;">
+                <input type="number" name="quantity" value="1" min="1" max="{{ product.quantity }}"
+                       class="field-input" style="width:60px;padding:9px 8px;text-align:center;">
+                <button type="submit" class="btn-mint" style="flex:1;justify-content:center;padding:10px;font-size:0.84rem;border-radius:var(--r-sm);">
+                  🛒 {{ t('buy_now_btn') }}
+                </button>
+              </div>
+            </form>
+            {% elif session.user_role == 'farmer' %}
+            <div style="background:var(--bg-amber);border-radius:var(--r-sm);padding:10px;text-align:center;font-size:0.78rem;color:#d97706;font-weight:600;border:1px solid #fde68a;margin-top:auto;">Farmers cannot buy</div>
+            {% else %}
+            <a href="/login" class="btn-mint" style="justify-content:center;padding:11px;font-size:0.85rem;border-radius:var(--r-sm);margin-top:auto;">Login to Buy</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="text-align:center;margin-top:48px;">
+      <button class="btn-outline" style="padding:13px 36px;border-radius:var(--r-pill);">Load More Products</button>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:80px 20px;">
+      <div style="font-size:3rem;margin-bottom:16px;">🔍</div>
+      <h5 style="font-family:'Fraunces',serif;font-size:1.4rem;margin-bottom:8px;color:var(--txt-900);">{{ t('no_crops_found') }}</h5>
+      <p style="color:var(--txt-300);margin-bottom:24px;">Try a different search</p>
+      <a href="/marketplace" class="btn-green" style="border-radius:var(--r-pill);">Browse All</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+const CROP_TRANSLATIONS={'टोमॅटो':'tomato','टमाटर':'tomato','बटाटा':'potato','आलू':'potato','कांदा':'onion','प्याज':'onion'};
+function startVoiceSearch(){
+  if(!('webkitSpeechRecognition'in window)&&!('SpeechRecognition'in window)){alert('Use Chrome.');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition,r=new SR();
+  r.lang='mr-IN';r.interimResults=false;
+  document.getElementById('voiceStatus').textContent='🎙 Listening...';
+  r.onresult=function(e){let spoken=e.results[0][0].transcript.trim(),term=spoken.toLowerCase();
+    for(const[k,v]of Object.entries(CROP_TRANSLATIONS)){if(spoken.includes(k)){term=v;break;}}
+    document.getElementById('searchInput').value=term;
+    document.getElementById('voiceStatus').textContent='✓ Heard: '+spoken;
+    setTimeout(()=>document.getElementById('searchForm').submit(),600);};
+  r.onerror=()=>{document.getElementById('voiceStatus').textContent='Not recognized.';};r.start();}
+</script>
+{% endblock %}
+{% endblock %}

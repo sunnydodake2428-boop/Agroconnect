@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% block title %}AgroConnect — Farm to Table, Direct{% endblock %}
+{% block content %}
+
+<!-- ═══════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════ -->
+<section style="background:#0a1f12;min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:110px 0 90px;">
+
+  <!-- Watermark -->
+  <div style="position:absolute;top:50%;right:-8%;transform:translateY(-50%);width:72vw;max-width:900px;aspect-ratio:1;pointer-events:none;z-index:1;">
+    <img src="/static/images/logo.png" alt="" style="width:100%;height:100%;object-fit:contain;opacity:0.055;filter:brightness(2) saturate(0);mix-blend-mode:luminosity;">
+  </div>
+
+  <!-- Radial glows -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse 55% 65% at 20% 50%,rgba(45,212,191,0.11) 0%,transparent 65%),radial-gradient(ellipse 40% 40% at 80% 20%,rgba(34,197,94,0.08) 0%,transparent 60%);"></div>
+
+  <div class="container position-relative" style="z-index:2;">
+    <div class="row align-items-center g-5">
+
+      <!-- LEFT — Copy -->
+      <div class="col-lg-7">
+
+        <!-- Eyebrow -->
+        <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.22);color:#a7f3e8;padding:8px 20px 8px 10px;border-radius:100px;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:36px;animation:slideUp 0.7s ease both;">
+          <div style="width:28px;height:28px;background:#22c55e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🌱</div>
+          India's Direct Farm-to-Table Platform
+        </div>
+
+        <!-- Headline -->
+        <h1 style="font-family:'Fraunces',serif;font-size:clamp(3rem,6.5vw,6rem);font-weight:700;color:#fff;line-height:1.02;letter-spacing:-0.04em;margin-bottom:28px;animation:slideUp 0.7s 0.1s ease both;">
+          Farmers Deserve<br>
+          <em style="color:#2dd4bf;font-style:italic;">Fair Prices.</em>
+        </h1>
+
+        <!-- Sub -->
+        <p style="font-size:1.05rem;color:rgba(255,255,255,0.52);max-width:440px;line-height:1.8;font-weight:300;margin-bottom:44px;animation:slideUp 0.7s 0.2s ease both;">
+          600 million Indian farmers lose 70% of their earnings to middlemen.
+          AgroConnect connects them directly to buyers — with AI-powered pricing,
+          live weather data, and zero commission.
+        </p>
+
+        <!-- CTA -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;animation:slideUp 0.7s 0.3s ease both;">
+          {% if session.user_role == 'farmer' %}
+            <a href="/farmer/dashboard" class="btn-primary-custom" style="font-size:1rem;padding:16px 32px;">🌾 Go to Dashboard →</a>
+            <a href="/farmer/add-listing" class="btn-ghost" style="font-size:1rem;padding:16px 32px;">+ Add Your Crop</a>
+          {% elif session.user_role == 'buyer' %}
+            <a href="/buyer/dashboard" class="btn-primary-custom" style="font-size:1rem;padding:16px 32px;">🛒 Go to Dashboard →</a>
+            <a href="/marketplace" class="btn-ghost" style="font-size:1rem;padding:16px 32px;">Browse Marketplace</a>
+          {% else %}
+            <a href="/register" class="btn-primary-custom" style="font-size:1rem;padding:16px 32px;">🌾 Join as Farmer</a>
+            <a href="/register" class="btn-ghost" style="font-size:1rem;padding:16px 32px;">🛒 Join as Buyer</a>
+          {% endif %}
+        </div>
+
+        <!-- Trust avatars -->
+        <div style="margin-top:40px;display:flex;align-items:center;gap:16px;animation:slideUp 0.7s 0.4s ease both;">
+          <div style="display:flex;">
+            {% for emoji in ['👨‍🌾','👩‍🌾','👨‍🌾'] %}
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(45,212,191,0.18);border:2px solid rgba(45,212,191,0.28);display:flex;align-items:center;justify-content:center;font-size:0.85rem;margin-right:-8px;">{{ emoji }}</div>
+            {% endfor %}
+          </div>
+          <p style="color:rgba(255,255,255,0.32);font-size:0.82rem;margin:0;line-height:1.5;">
+            Trusted by farmers across<br>
+            <strong style="color:rgba(255,255,255,0.60);">Maharashtra, India</strong>
+          </p>
+        </div>
+      </div>
+
+      <!-- RIGHT — Stats panel -->
+      <div class="col-lg-5" style="animation:slideUp 0.7s 0.35s ease both;">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:36px;backdrop-filter:blur(10px);">
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:24px;">Platform at a Glance</div>
+
+          <div style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="font-family:'Fraunces',serif;font-size:3.2rem;font-weight:700;color:#fff;line-height:1;letter-spacing:-0.04em;">70<span style="color:#2dd4bf;font-size:1.8rem;">%</span></div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.42);text-transform:uppercase;letter-spacing:0.1em;margin-top:6px;font-weight:600;">Middlemen cut eliminated</div>
+          </div>
+
+          <div style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="font-family:'Fraunces',serif;font-size:3.2rem;font-weight:700;color:#fff;line-height:1;letter-spacing:-0.04em;">3<span style="color:#f59e0b;font-size:1.8rem;">×</span></div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.42);text-transform:uppercase;letter-spacing:0.1em;margin-top:6px;font-weight:600;">Higher income for farmers</div>
+          </div>
+
+          <div style="padding:20px 0;">
+            <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:700;color:#fff;line-height:1;">AI <span style="color:#2dd4bf;font-size:1rem;font-weight:600;">Powered</span></div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.42);text-transform:uppercase;letter-spacing:0.1em;margin-top:6px;font-weight:600;">Crop detection + price prediction</div>
+          </div>
+
+          <!-- Income bar -->
+          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:20px;margin-top:8px;">
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:16px;">Tomato 100kg — Income Comparison</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-size:0.82rem;color:rgba(255,255,255,0.42);">Via Mandi (middleman)</span>
+              <span style="color:#fca5a5;font-weight:700;font-family:'Fraunces',serif;font-size:1.15rem;">₹800</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.82rem;color:rgba(255,255,255,0.75);font-weight:600;">Via AgroConnect</span>
+              <span style="color:#2dd4bf;font-weight:700;font-family:'Fraunces',serif;font-size:1.4rem;">₹2,500</span>
+            </div>
+            <div style="margin-top:16px;">
+              <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:75%;background:linear-gradient(90deg,#2dd4bf,#22c55e);border-radius:4px;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                <span style="font-size:0.65rem;color:rgba(255,255,255,0.24);">Mandi</span>
+                <span style="font-size:0.65rem;color:#2dd4bf;font-weight:600;">+213% more via AgroConnect</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:2;animation:bounce 2s infinite;">
+    <div style="width:28px;height:44px;border:2px solid rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;">
+      <div style="width:4px;height:8px;background:rgba(255,255,255,0.35);border-radius:4px;animation:scrollDot 2s infinite;"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     STATS BAND — fully visible white text
+═══════════════════════════════════════════ -->
+<section style="background:#071209;padding:56px 0;border-top:1px solid rgba(45,212,191,0.15);border-bottom:1px solid rgba(45,212,191,0.15);">
+  <div class="container">
+    <div class="row g-0">
+      <div class="col-6 col-md-3">
+        <div class="sbi">
+          <div class="sbn">600<span>M+</span></div>
+          <div class="sbl">Farmers in India</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="sbi">
+          <div class="sbn">70<span>%</span></div>
+          <div class="sbl">Lost to middlemen</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="sbi">
+          <div class="sbn" style="color:#2dd4bf;">₹0</div>
+          <div class="sbl">Commission charged</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="sbi" style="border-right:none;">
+          <div class="sbn">AI</div>
+          <div class="sbl">Powered pricing</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     HOW IT WORKS — step cards
+═══════════════════════════════════════════ -->
+<section style="background:#f8fffe;padding:110px 0;">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:64px;">
+      <span class="eyebrow">How It Works</span>
+      <h2 style="margin-bottom:18px;">Simple. Fair. Direct.</h2>
+      <p style="max-width:480px;margin:0 auto;color:#5a7a65;font-size:1.05rem;line-height:1.78;">
+        From farm to buyer in three steps — no middlemen, no hidden fees, no exploitation.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      {% for num, icon, title, desc in [
+        ('1','📸','Farmer Lists Crop','Upload a crop photo. AI identifies the crop, checks live weather, and suggests the fair market price automatically. No typing. No guessing.'),
+        ('2','🔍','Buyer Discovers & Orders','Buyers browse verified farmers across Maharashtra. Search by voice in Marathi or Hindi. See exactly what the farmer earns vs the mandi price.'),
+        ('3','💸','Direct Payment & Delivery','Money goes directly to the farmer — zero commission. Track order from confirmed to delivered. Rate your farmer after every delivery.')
+      ] %}
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">{{ num }}</div>
+          <div style="font-size:2.2rem;margin-bottom:14px;">{{ icon }}</div>
+          <h3 style="font-size:1.25rem;margin-bottom:14px;font-family:'Fraunces',serif;color:#0a1f12;font-weight:700;">{{ title }}</h3>
+          <p style="font-size:0.90rem;color:#5a7a65;line-height:1.78;margin:0;">{{ desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     IMPACT — cmp-cards + Change This Now btn
+═══════════════════════════════════════════ -->
+<section class="impact-dark">
+  <div class="container position-relative" style="z-index:2;">
+    <div class="row align-items-center g-5">
+
+      <div class="col-lg-5">
+        <span class="eyebrow eyebrow-light">The Problem We Solve</span>
+        <div class="big-num mt-3 mb-4">₹4–5<span>L</span></div>
+        <p style="color:rgba(255,255,255,0.55);font-size:1.05rem;line-height:1.8;max-width:380px;font-weight:300;">
+          The average Indian farmer earns just ₹4–5 lakh per year.
+          The same produce sells in cities for 3–4× that price.
+          The gap goes to middlemen — not the farmer who grew it.
+        </p>
+        <a href="/register" class="btn-primary-custom mt-4" style="display:inline-flex;margin-top:28px;">
+          Change This Now →
+        </a>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="row g-3">
+          {% for emoji, name, loc, mandi, agro in [
+            ('🧅','Onion Farmer','Nashik, Maharashtra','₹8/kg','₹20/kg'),
+            ('🌸','Rose Farmer','Kolhapur, Maharashtra','₹60/kg','₹150/kg'),
+            ('🍅','Tomato Farmer','Pune, Maharashtra','₹8/kg','₹25/kg')
+          ] %}
+          <div class="col-6">
+            <div class="cmp-card">
+              <div style="font-size:2rem;margin-bottom:12px;">{{ emoji }}</div>
+              <div style="font-family:'Fraunces',serif;font-size:1.15rem;font-weight:700;color:#fff;margin-bottom:4px;">{{ name }}</div>
+              <div style="font-size:0.74rem;color:rgba(255,255,255,0.42);margin-bottom:18px;">{{ loc }}</div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+                <div>
+                  <div style="font-size:0.60rem;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:5px;font-weight:700;">Mandi</div>
+                  <div style="color:#fca5a5;font-weight:700;font-family:'Fraunces',serif;font-size:1.25rem;">{{ mandi }}</div>
+                </div>
+                <div style="width:1px;height:36px;background:rgba(255,255,255,0.12);"></div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.60rem;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:5px;font-weight:700;">AgroConnect</div>
+                  <div style="color:#2dd4bf;font-weight:700;font-family:'Fraunces',serif;font-size:1.25rem;">{{ agro }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <!-- 250% card -->
+          <div class="col-6">
+            <div class="cmp-card" style="background:rgba(45,212,191,0.10);border-color:rgba(45,212,191,0.28);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:180px;">
+              <div style="font-family:'Fraunces',serif;font-size:3.2rem;font-weight:700;color:#2dd4bf;line-height:1;margin-bottom:10px;">250%</div>
+              <div style="font-size:0.80rem;color:rgba(255,255,255,0.52);line-height:1.6;">Average income increase<br>on AgroConnect</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     PLATFORM FEATURES — elegant cards
+═══════════════════════════════════════════ -->
+<section style="background:#ffffff;padding:110px 0;">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:64px;">
+      <span class="eyebrow">Platform Features</span>
+      <h2 style="margin-bottom:18px;">Built for Real Farmers</h2>
+      <p style="max-width:480px;margin:0 auto;color:#5a7a65;font-size:1.05rem;line-height:1.78;">
+        Every feature answers one question: does this help a farmer in a Maharashtra village?
+      </p>
+    </div>
+
+    <div class="row g-4">
+      {% for icon, bg, title, desc in [
+        ('📸','#f0fdfa','AI Crop Detection','Upload a photo — AI identifies the crop. No English typing needed. Perfect for low-literacy farmers in rural Maharashtra.'),
+        ('📊','#fffbeb','Best Time to Sell','12-month price trend shows farmers exactly when to sell for maximum profit. Real data, simple decisions.'),
+        ('🌦️','#eff6ff','Live Weather Pricing','GPS detects your exact location. Live weather adjusts crop prices. Farming advisories update in real time.'),
+        ('🎤','#faf5ff','Voice Search Marathi','Say "टोमॅटो" and find tomatoes. Search crops by speaking in Marathi or Hindi. True rural accessibility.'),
+        ('🌸','#f0fdf4','Flower Market','Roses, marigold, jasmine, mogra — a scam-ridden sector finally gets transparency and fair pricing.'),
+        ('⭐','#fffbeb','Verified Ratings','Buyers rate farmers after delivery. Honest farmers build reputation. Trust replaces exploitation.')
+      ] %}
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feat-icon" style="background:{{ bg }};">{{ icon }}</div>
+          <h5 style="margin-bottom:10px;font-family:'Fraunces',serif;font-size:1.15rem;color:#0a1f12;font-weight:700;">{{ title }}</h5>
+          <p style="font-size:0.875rem;color:#5a7a65;line-height:1.78;margin:0;">{{ desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     JOIN CTA — trust cards + dual buttons
+═══════════════════════════════════════════ -->
+<section class="cta-dark">
+  <div class="container position-relative" style="z-index:2;">
+
+    <!-- Trust proof mini-cards -->
+    <div class="row g-3 justify-content-center" style="margin-bottom:64px;">
+      {% for emoji, val, lbl in [
+        ('👨‍🌾','600M+','Farmers in India'),
+        ('💰','₹0','Commission ever'),
+        ('🤝','3×','More income'),
+        ('🤖','AI','Powered platform')
+      ] %}
+      <div class="col-6 col-sm-3">
+        <div class="cta-trust-card">
+          <div style="font-size:1.8rem;margin-bottom:10px;">{{ emoji }}</div>
+          <div style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;color:#fff;line-height:1;letter-spacing:-0.03em;margin-bottom:6px;">{{ val }}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.40);text-transform:uppercase;letter-spacing:0.10em;font-weight:600;">{{ lbl }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- CTA text + buttons -->
+    <div class="text-center">
+      <span class="eyebrow eyebrow-light">Join AgroConnect</span>
+      <h2 style="color:#fff;margin:20px 0 24px;font-size:clamp(2.2rem,5vw,4rem);letter-spacing:-0.03em;">
+        One farmer. One buyer.<br>
+        <em style="color:#2dd4bf;font-style:italic;">Zero middlemen.</em>
+      </h2>
+      <p style="color:rgba(255,255,255,0.45);font-size:1.05rem;max-width:460px;margin:0 auto 44px;line-height:1.78;font-weight:300;">
+        Join farmers across Maharashtra already earning 3× more by selling directly to buyers.
+      </p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+        <a href="/register" class="btn-primary-custom" style="font-size:1rem;padding:17px 38px;">
+          🌾 Join as Farmer — It's Free
+        </a>
+        <a href="/marketplace" class="btn-ghost" style="font-size:1rem;padding:17px 38px;">
+          Browse Marketplace →
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<style>
+@keyframes slideUp  { from{opacity:0;transform:translateY(32px);}to{opacity:1;transform:translateY(0);} }
+@keyframes bounce   { 0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-8px);} }
+@keyframes scrollDot{ 0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(12px);} }
+</style>
+
+{% endblock %}
