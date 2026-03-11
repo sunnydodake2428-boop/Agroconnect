@@ -16,11 +16,9 @@ AGMARKNET_API_KEY     = '579b464db66ec23bdd000001f19d95480291496e59a48e773ea3101
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
 
 # GEMINI KEY — reads from env, falls back to hardcoded for demo
-GEMINI_API_KEY = (
-    os.environ.get("GEMINI_API_KEY") or "AIzaSyDF-tC_ciLlh_Zlm_6IVNpXSZGqCI4xSY0"
-    os.environ.get("GOOGLE_API_KEY") or
-    ""   # ← PASTE YOUR KEY HERE AS FALLBACK: "AIzaSy..."
-)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDF-tC_ciLlh_Zlm_6IVNpXSZGqCI4xSY0")
+       # ← PASTE YOUR KEY HERE AS FALLBACK: "AIzaSy..."
+
 
 
 # ============================================================
