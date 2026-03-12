@@ -62,6 +62,20 @@ def add_listing():
     return render_template('farmer/add_listing.html')
 
 
+@farmer.route('/farmer/delete-listing/<int:product_id>', methods=['POST'])
+@farmer_required
+def delete_listing(product_id):
+    product = Product.query.get_or_404(product_id)
+    # Safety check — farmer can only delete their own listing
+    if product.farmer_id != session['user_id']:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('farmer.dashboard'))
+    db.session.delete(product)
+    db.session.commit()
+    flash(f'"{product.crop_name}" listing deleted successfully.', 'success')
+    return redirect(url_for('farmer.dashboard'))
+
+
 @farmer.route('/farmer/update-order/<int:order_id>/<status>')
 @farmer_required
 def update_order(order_id, status):

@@ -184,7 +184,7 @@
         <table class="data-table">
           <thead><tr>
             <th>Crop</th><th>Category</th><th>Quantity</th>
-            <th>Price</th><th>Status</th><th>Listed On</th>
+            <th>Price</th><th>Status</th><th>Listed On</th><th>Action</th>
           </tr></thead>
           <tbody>
             {% if listings %}
@@ -196,10 +196,22 @@
                 <td style="font-size:0.90rem;font-weight:700;color:var(--accent-3);">₹{{ item.price }}</td>
                 <td><span class="badge-status badge-{{ item.status }}">{{ item.status }}</span></td>
                 <td style="font-size:0.80rem;color:var(--txt-300);">{{ item.created_at.strftime('%d %b %Y') }}</td>
+                <td>
+                  <form method="POST" action="/farmer/delete-listing/{{ item.product_id }}"
+                        onsubmit="return confirm('Delete {{ item.crop_name }} listing? This cannot be undone.');"
+                        style="display:inline;">
+                    <button type="submit"
+                      style="font-size:0.78rem;font-weight:700;color:#f87171;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.25);padding:6px 14px;border-radius:var(--r-sm);cursor:pointer;transition:all 0.15s;"
+                      onmouseover="this.style.background='rgba(239,68,68,0.22)'"
+                      onmouseout="this.style.background='rgba(239,68,68,0.10)'">
+                      🗑 Delete
+                    </button>
+                  </form>
+                </td>
               </tr>
               {% endfor %}
             {% else %}
-            <tr><td colspan="6" style="text-align:center;padding:52px 20px;">
+            <tr><td colspan="7" style="text-align:center;padding:52px 20px;">
               <div style="font-size:2rem;margin-bottom:12px;">🌱</div>
               <p style="color:var(--txt-300);margin-bottom:18px;">No listings yet.</p>
               <a href="/farmer/add-listing" class="btn-green" style="border-radius:var(--r-pill);">Add Your First Crop</a>
