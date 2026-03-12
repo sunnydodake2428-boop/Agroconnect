@@ -66,3 +66,54 @@ def logout():
     session.clear()
     flash('Logged out successfully.', 'success')
     return redirect(url_for('home'))
+
+@auth.route('/account')
+def account():
+    if 'user_id' not in session:
+        flash('Please login first.', 'danger')
+        return redirect(url_for('auth.login'))
+    from models import User
+    user = User.query.get(session['user_id'])
+    return render_template('auth/profile.html', user=user)
+
+
+@auth.route('/account/update-profile', methods=['POST'])
+def update_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    from models import User
+    user = User.query.get(session['user_id'])
+    user.name     = request.form.get('name', user.name).strip()
+    user.email    = request.form.get('email', user.email).strip()
+    user.phone    = request.form.get('phone', '').strip()
+    user.location = request.form.get('location', '').strip()
+    db.session.commit()
+    session['user_name'] = user.name
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('auth.account'))
+
+
+@auth.route('/account/change-password', methods=['POST'])
+def change_password():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    from models import User
+    user = User.query.get(session['user_id'])
+    current_pw  = request.form.get('current_password', '')
+    new_pw      = request.form.get('new_password', '')
+    confirm_pw  = request.form.get('confirm_password', '')
+
+    if not bcrypt.check_password_hash(user.password, current_pw):
+        flash('Current password is incorrect.', 'danger')
+        return redirect(url_for('auth.account') + '#password')
+    if len(new_pw) < 6:
+        flash('New password must be at least 6 characters.', 'danger')
+        return redirect(url_for('auth.account') + '#password')
+    if new_pw != confirm_pw:
+        flash('New passwords do not match.', 'danger')
+        return redirect(url_for('auth.account') + '#password')
+
+    user.password = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+    db.session.commit()
+    flash('Password changed successfully!', 'success')
+    return redirect(url_for('auth.account'))
