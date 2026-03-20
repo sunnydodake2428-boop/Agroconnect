@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="dashboard-header">
+    <div class="container">
+        <h2 class="dashboard-greeting">Admin Control Panel</h2>
+        <p class="dashboard-subtitle">Platform overview and management</p>
+    </div>
+</div>
+
+<div class="container" style="margin-top:20px;">
+    <div class="row g-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label-card">Total Farmers</div>
+                <div class="stat-value">{{ farmers.count }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card amber">
+                <div class="stat-label-card">Total Buyers</div>
+                <div class="stat-value">{{ buyers.count }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card dark">
+                <div class="stat-label-card">Total Orders</div>
+                <div class="stat-value">{{ total_orders.count }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label-card">Platform Revenue</div>
+                <div class="stat-value" style="font-size:1.6rem;">Rs.{{ revenue.total or 0 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container mt-4">
+        <h5 class="table-title">Recent Users</h5>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Location</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr>
+                        <td><strong>{{ user.name }}</strong></td>
+                        <td style="font-size:0.85rem;">{{ user.email }}</td>
+                        <td><span class="status-badge status-available">{{ user.role }}</span></td>
+                        <td style="font-size:0.85rem;">{{ user.location }}</td>
+                        <td style="font-size:0.82rem; color:var(--text-light);">{{ user.created_at.strftime('%d %b %Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-container mt-4 mb-5">
+        <h5 class="table-title">Recent Orders</h5>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Crop</th>
+                        <th>Buyer</th>
+                        <th>Farmer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td style="font-size:0.82rem; color:var(--text-light);">#{{ order.order_id }}</td>
+                        <td><strong>{{ order.crop_name }}</strong></td>
+                        <td>{{ order.buyer_name }}</td>
+                        <td>{{ order.farmer_name }}</td>
+                        <td>Rs. {{ order.total_price }}</td>
+                        <td><span class="status-badge status-{{ order.status }}">{{ order.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

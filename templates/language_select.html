@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroConnect — Choose Language</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(4,10,6,0.88) 0%, rgba(8,22,12,0.82) 100%),
+                        url('/static/images/farmer.png') center/cover no-repeat fixed;
+            font-family: 'DM Sans', 'Noto Sans Devanagari', sans-serif;
+            padding: 24px 16px;
+        }
+        .card {
+            width: 100%; max-width: 480px;
+            background: rgba(8,18,10,0.88);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(91,229,132,0.2);
+            border-radius: 28px;
+            padding: 52px 44px 44px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+        .logo-row {
+            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 36px;
+        }
+        .logo-row img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; }
+        .logo-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem; font-weight: 900; color: #fff; letter-spacing: -0.03em;
+        }
+        .logo-text span { color: #4aad6f; }
+        .heading-block { margin-bottom: 40px; }
+        .main-title {
+            font-size: 1.1rem; font-weight: 700;
+            color: rgba(255,255,255,0.9); line-height: 1.7;
+        }
+        .sub-note { font-size: 0.78rem; color: rgba(255,255,255,0.28); margin-top: 10px; }
+        .lang-options { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+        .lang-btn {
+            display: flex; align-items: center; gap: 18px;
+            padding: 18px 22px;
+            background: rgba(255,255,255,0.05);
+            border: 1.5px solid rgba(255,255,255,0.1);
+            border-radius: 16px; cursor: pointer;
+            transition: all 0.22s ease; text-align: left;
+            width: 100%; position: relative; overflow: hidden;
+        }
+        .lang-btn:hover { background: rgba(91,229,132,0.1); border-color: rgba(91,229,132,0.35); transform: translateY(-2px); }
+        .lang-btn.selected { background: rgba(91,229,132,0.14); border-color: #4aad6f; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.3); }
+        .check {
+            position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+            width: 22px; height: 22px; border-radius: 50%; background: #4aad6f;
+            display: none; align-items: center; justify-content: center;
+            font-size: 0.75rem; color: #fff; font-weight: 700;
+        }
+        .lang-btn.selected .check { display: flex; }
+        .lang-flag { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+        .lang-info { flex: 1; }
+        .lang-native {
+            font-size: 1.2rem; font-weight: 700; color: #fff;
+            font-family: 'Noto Sans Devanagari', 'DM Sans', sans-serif;
+            line-height: 1.2; margin-bottom: 3px;
+        }
+        .lang-english { font-size: 0.78rem; color: rgba(255,255,255,0.38); font-weight: 500; letter-spacing: 0.03em; }
+        .continue-btn {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #2d7a4f, #4aad6f);
+            color: #fff; border: none; border-radius: 100px;
+            font-size: 1rem; font-weight: 700; cursor: pointer;
+            font-family: 'DM Sans', 'Noto Sans Devanagari', sans-serif;
+            box-shadow: 0 8px 24px rgba(61,186,97,0.45);
+            transition: all 0.22s ease; opacity: 0.4; pointer-events: none;
+        }
+        .continue-btn.active { opacity: 1; pointer-events: all; }
+        .continue-btn.active:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(61,186,97,0.6); }
+        .bottom-note { margin-top: 20px; font-size: 0.72rem; color: rgba(255,255,255,0.18); }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo-row">
+        <img src="/static/images/logo.png" alt="AgroConnect" onerror="this.style.display='none'">
+        <span class="logo-text">Agro<span>Connect</span></span>
+    </div>
+
+    <div class="heading-block">
+        <div class="main-title">
+            Choose Your Language<br>
+            <span style="color:rgba(255,255,255,0.55);">भाषा चुनें</span><br>
+            <span style="color:rgba(255,255,255,0.55);">तुमची भाषा निवडा</span>
+        </div>
+        <div class="sub-note">Select once — you can change anytime from the menu</div>
+    </div>
+
+    <form method="POST" id="langForm">
+        <input type="hidden" name="next" value="{{ request.args.get('next', '/') }}">
+        <input type="hidden" name="lang" id="langInput" value="">
+
+        <div class="lang-options">
+            <button type="button" class="lang-btn" data-lang="mr" onclick="selectLang(this)">
+                <div class="lang-flag">🇮🇳</div>
+                <div class="lang-info">
+                    <div class="lang-native">मराठी</div>
+                    <div class="lang-english">Marathi · Maharashtra</div>
+                </div>
+                <div class="check">&#10003;</div>
+            </button>
+
+            <button type="button" class="lang-btn" data-lang="hi" onclick="selectLang(this)">
+                <div class="lang-flag">🇮🇳</div>
+                <div class="lang-info">
+                    <div class="lang-native">हिन्दी</div>
+                    <div class="lang-english">Hindi · National Language</div>
+                </div>
+                <div class="check">&#10003;</div>
+            </button>
+
+            <button type="button" class="lang-btn" data-lang="en" onclick="selectLang(this)">
+                <div class="lang-flag">🌐</div>
+                <div class="lang-info">
+                    <div class="lang-native" style="font-family:'DM Sans',sans-serif;">English</div>
+                    <div class="lang-english">English · International</div>
+                </div>
+                <div class="check">&#10003;</div>
+            </button>
+        </div>
+
+        <button type="submit" class="continue-btn" id="continueBtn">
+            <span id="continueTxt">Select a language to continue</span>
+        </button>
+    </form>
+
+    <div class="bottom-note">AgroConnect &mdash; Connecting Farmers Directly to Buyers &#127807;</div>
+</div>
+
+<script>
+var LABELS = { mr: 'पुढे चला →', hi: 'आगे बढ़ें →', en: 'Continue →' };
+function selectLang(btn) {
+    document.querySelectorAll('.lang-btn').forEach(function(b){ b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    var lang = btn.getAttribute('data-lang');
+    document.getElementById('langInput').value = lang;
+    var cb = document.getElementById('continueBtn');
+    cb.classList.add('active');
+    document.getElementById('continueTxt').textContent = LABELS[lang];
+}
+document.getElementById('langForm').addEventListener('submit', function(e){
+    if (!document.getElementById('langInput').value) { e.preventDefault(); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Track Order — AgroConnect{% endblock %}
+{% block content %}
+<div class="container mt-4 mb-5">
+  <h5 class="fw-bold mb-1">📦 Track Order</h5>
+  <small class="text-muted">Order #{{ order.order_id }} · Placed {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+
+  <div class="row mt-3">
+    <div class="col-lg-8">
+
+      <!-- Live Map Placeholder -->
+      <div class="card shadow-sm mb-3" style="height:180px;background:linear-gradient(135deg,#d1fae5,#ecfdf5);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+          <div style="font-size:48px;">🚚</div>
+          <div class="fw-bold">Live Tracking</div>
+          <small class="text-muted">Your order is on the way</small><br>
+          <span class="badge bg-success mt-1">⏱️ Arriving Soon</span>
+        </div>
+      </div>
+
+      <!-- Tracking Steps -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h6 class="fw-bold mb-4">Order Progress</h6>
+          {% for key, label, icon in status_steps %}
+          {% set done = loop.index0 <= current_step %}
+          {% set active = loop.index0 == current_step %}
+          <div class="d-flex gap-3">
+            <div class="d-flex flex-column align-items-center">
+              <div style="width:32px;height:32px;border-radius:50%;
+                          background:{{ '#16a34a' if done else '#fff' }};
+                          border:2px solid {{ '#16a34a' if done else '#dee2e6' }};
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:14px;color:{{ '#fff' if done else '#9ca3af' }};
+                          {{ 'box-shadow:0 0 0 4px rgba(22,163,74,.15);' if active else '' }}
+                          z-index:1;position:relative;flex-shrink:0;">
+                {{ '✓' if done and not active else icon }}
+              </div>
+              {% if not loop.last %}
+              <div style="width:2px;height:40px;background:{{ '#16a34a' if loop.index0 < current_step else '#dee2e6' }};"></div>
+              {% endif %}
+            </div>
+            <div class="pb-4">
+              <div class="fw-{{ 'bold' if done else 'normal' }} {{ 'text-success' if active else '' }}">{{ label }}</div>
+              {% if active %}
+              <small class="text-success fw-bold">● In Progress</small>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Order Item -->
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold">Items in this Order</div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            <img src="{{ url_for('static', filename='images/' ~ (order.product.image or 'logo.png')) }}"
+                 style="width:60px;height:60px;object-fit:cover;border-radius:8px;"
+                 onerror="this.src='/static/images/logo.png'">
+            <div class="flex-grow-1">
+              <div class="fw-bold">{{ order.product.crop_name }}</div>
+              <small class="text-muted">{{ order.quantity|int }} {{ order.product.unit or 'kg' }} × ₹{{ order.product.price }}</small>
+            </div>
+            <div class="fw-bold">₹{{ order.total_price|int }}</div>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold">
+            <span>Total Paid</span>
+            <span class="text-success">₹{{ order.total_price|int }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">📍 Delivery Address</div>
+        <div class="card-body text-muted" style="font-size:14px;">{{ order.delivery_address }}</div>
+      </div>
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">💳 Payment</div>
+        <div class="card-body">
+          <span class="badge bg-success-subtle text-success fs-6 text-capitalize">{{ order.payment_method or 'COD' }}</span>
+        </div>
+      </div>
+      <div class="d-flex flex-column gap-2">
+        <a href="{{ url_for('buyer.my_orders') }}" class="btn btn-outline-success">My Orders</a>
+        {% if order.status == 'delivered' %}
+        <a href="{{ url_for('buyer.review', order_id=order.order_id) }}" class="btn btn-success">⭐ Leave Review</a>
+        {% endif %}
+        <a href="{{ url_for('buyer.marketplace') }}" class="btn btn-outline-secondary">Continue Shopping</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

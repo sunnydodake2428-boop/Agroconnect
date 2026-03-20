@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('buyer_dash_title') }} — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">{{ t('buyer_dash_title') }}</div>
+    <h2 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:4px;">{{ t('welcome') }}, {{ session.user_name }} 🛒</h2>
+    <p>{{ t('track_orders') }}</p>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container">
+    <div class="row g-3 stats-pull">
+      {% set delivered_count = orders|selectattr('status','equalto','delivered')|list|length %}
+      {% set transit_count = orders|selectattr('status','in',['confirmed','out_for_delivery','packed','farmer_confirmed'])|list|length %}
+      <div class="col-6 col-md-3"><div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="stat-value">{{ orders|length }}</div><div class="stat-icon icon-blue">📦</div>
+        </div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card">
+        <div class="stat-label">In Transit</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="stat-value">{{ transit_count }}</div><div class="stat-icon icon-amber">🚚</div>
+        </div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card">
+        <div class="stat-label">Delivered</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="stat-value">{{ delivered_count }}</div><div class="stat-icon icon-green">✅</div>
+        </div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card">
+        <div class="stat-label">Total Spent</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="stat-value" style="font-size:1.7rem;color:var(--accent-3);">₹{{ total_spent or 0 }}</div>
+          <div class="stat-icon icon-teal">💰</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;">
+      <a href="/marketplace" class="btn-green" style="border-radius:var(--r-md);"><i class="fas fa-store" style="font-size:0.78rem;"></i> Browse Marketplace</a>
+      <a href="/cart" class="btn-outline">🛒 My Cart</a>
+      <a href="/my-orders" class="btn-outline">📦 All Orders</a>
+    </div>
+
+    <!-- ORDERS PANEL -->
+    <div class="panel">
+      <div class="tab-bar">
+        {% for tab in ['All Orders','Processing','Shipping','Delivered','Cancelled'] %}
+        <button class="tab-btn {% if loop.first %}active{% endif %}"
+                id="tab_{{ tab|replace(' ','_') }}"
+                onclick="filterOrders('{{ tab }}', this)">{{ tab }}</button>
+        {% endfor %}
+      </div>
+
+      {% if orders %}
+        {% for order in orders %}
+        <div class="order-card" data-status="{{ order.status }}">
+
+          <!-- Order header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:0.92rem;font-weight:700;color:var(--txt-900);">ORD-{{ '%03d'|format(order.order_id) }}</span>
+              <span class="badge-status badge-{{ order.status }}">{{ order.status|replace('_',' ')|title }}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.68rem;color:var(--txt-300);margin-bottom:2px;">Total Amount</div>
+              <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:400;color:var(--accent-3);">₹{{ order.total_price }}</div>
+            </div>
+          </div>
+          <div style="font-size:0.74rem;color:var(--txt-300);margin-bottom:12px;">Ordered on {{ order.created_at.strftime('%d %b %Y') }}</div>
+
+          <!-- Product row -->
+          <div class="order-product-row">
+            <img src="/static/images/{{ order.product.image }}" alt="{{ order.product.crop_name }}"
+                 onerror="this.src='https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200'"
+                 style="width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0;">
+            <div style="flex:1;">
+              <div style="font-size:0.92rem;font-weight:700;color:var(--txt-900);margin-bottom:2px;">{{ order.product.crop_name }}</div>
+              <div style="font-size:0.78rem;color:var(--txt-300);">{{ order.quantity }} {{ order.product.unit }} &bull; ₹{{ order.product.price }}/{{ order.product.unit }}</div>
+            </div>
+            <div style="font-size:0.92rem;font-weight:600;color:var(--txt-900);">₹{{ order.total_price }}</div>
+          </div>
+
+          <!-- Farmer info + action buttons -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="avatar av-teal" style="width:34px;height:34px;">{{ order.farmer.name[:2]|upper }}</div>
+              <div>
+                <div style="font-size:0.85rem;font-weight:600;color:var(--txt-900);">{{ order.farmer.name }}</div>
+                <div style="font-size:0.74rem;color:var(--txt-300);">📞 {{ order.farmer.phone or '+91 00000 00000' }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+
+              <!-- TRACK ORDER — active for all non-cancelled, non-delivered -->
+              {% if order.status not in ['delivered','cancelled'] %}
+              <a href="/order/track/{{ order.order_id }}"
+                 style="display:inline-flex;align-items:center;gap:5px;font-size:0.80rem;font-weight:700;
+                        color:#2dd4bf;padding:7px 14px;border-radius:var(--r-sm);
+                        background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.30);
+                        text-decoration:none;transition:all 0.15s;"
+                 onmouseover="this.style.background='rgba(45,212,191,0.20)'"
+                 onmouseout="this.style.background='rgba(45,212,191,0.10)'">
+                📍 Track Order
+              </a>
+              {% endif %}
+
+              <!-- RATE FARMER — only after delivered -->
+              {% if order.status == 'delivered' %}
+              <a href="/review/{{ order.order_id }}"
+                 style="display:inline-flex;align-items:center;gap:5px;font-size:0.80rem;font-weight:700;
+                        color:#f59e0b;padding:7px 14px;border-radius:var(--r-sm);
+                        background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);
+                        text-decoration:none;transition:all 0.15s;"
+                 onmouseover="this.style.background='rgba(245,158,11,0.20)'"
+                 onmouseout="this.style.background='rgba(245,158,11,0.10)'">
+                ⭐ Rate Farmer
+              </a>
+              <a href="/add-to-cart/{{ order.product_id }}"
+                 onclick="return confirm('Add {{ order.product.crop_name }} to cart again?')"
+                 style="display:inline-flex;align-items:center;gap:5px;font-size:0.80rem;font-weight:700;
+                        color:var(--txt-500);padding:7px 14px;border-radius:var(--r-sm);
+                        background:var(--bg-card);border:1px solid var(--border);
+                        text-decoration:none;transition:all 0.15s;"
+                 onmouseover="this.style.borderColor='var(--accent-3)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+                🔄 Reorder
+              </a>
+              {% endif %}
+
+              <!-- VIEW DETAILS — always active, shows modal -->
+              <button onclick="showOrderDetails({{ order.order_id }}, '{{ order.product.crop_name }}', '{{ order.status }}', '{{ order.quantity }} {{ order.product.unit }}', '₹{{ order.total_price }}', '{{ order.delivery_address|replace("'", "") }}', '{{ order.payment_method or 'cod' }}', '{{ order.created_at.strftime('%d %b %Y') }}')"
+                 style="display:inline-flex;align-items:center;gap:5px;font-size:0.80rem;font-weight:700;
+                        color:var(--txt-500);padding:7px 14px;border-radius:var(--r-sm);
+                        background:var(--bg-card);border:1px solid var(--border);cursor:pointer;
+                        transition:all 0.15s;"
+                 onmouseover="this.style.borderColor='#2dd4bf'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+                👁 View Details
+              </button>
+
+              <!-- CANCEL — only for confirmed orders -->
+              {% if order.status == 'confirmed' %}
+              <form method="POST" action="/order/cancel/{{ order.order_id }}"
+                    onsubmit="return confirm('Cancel this order? This cannot be undone.');"
+                    style="display:inline;">
+                <button type="submit"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:0.80rem;font-weight:700;
+                          color:#f87171;padding:7px 14px;border-radius:var(--r-sm);
+                          background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);cursor:pointer;
+                          transition:all 0.15s;"
+                   onmouseover="this.style.background='rgba(239,68,68,0.18)'"
+                   onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                  ✕ Cancel
+                </button>
+              </form>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:64px 20px;">
+        <div style="font-size:3rem;margin-bottom:16px;">🛒</div>
+        <h5 style="font-family:'Fraunces',serif;font-size:1.3rem;margin-bottom:8px;color:var(--txt-900);">{{ t('no_orders_buyer') }}</h5>
+        <p style="color:var(--txt-300);margin-bottom:24px;">Start shopping from verified farmers</p>
+        <a href="/marketplace" class="btn-green" style="border-radius:var(--r-pill);">{{ t('go_marketplace') }}</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ORDER DETAILS MODAL -->
+<div id="orderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#0d2218;border:1px solid rgba(45,212,191,0.20);border-radius:20px;padding:28px;max-width:480px;width:90%;position:relative;">
+    <button onclick="closeModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--txt-300);font-size:1.2rem;cursor:pointer;">✕</button>
+    <div style="font-size:0.70rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--txt-300);font-weight:700;margin-bottom:14px;">Order Details</div>
+    <div id="modalContent"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="closeModal()" class="btn-outline" style="flex:1;border-radius:var(--r-pill);padding:10px;">Close</button>
+      <a id="modalTrackBtn" href="#" class="btn-green" style="flex:1;border-radius:var(--r-pill);padding:10px;text-align:center;text-decoration:none;">📍 Track Order</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function filterOrders(status, el) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.order-card').forEach(card => {
+    const s = card.dataset.status;
+    card.style.display = (
+      status === 'All Orders' ||
+      (status === 'Processing' && ['confirmed','farmer_confirmed','packed'].includes(s)) ||
+      (status === 'Shipping'   && s === 'out_for_delivery') ||
+      (status === 'Delivered'  && s === 'delivered') ||
+      (status === 'Cancelled'  && s === 'cancelled')
+    ) ? '' : 'none';
+  });
+}
+
+function showOrderDetails(id, crop, status, qty, total, address, payment, date) {
+  document.getElementById('modalContent').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:1.05rem;font-weight:700;color:var(--txt-900);">${crop}</span>
+        <span style="font-size:0.88rem;font-weight:700;color:var(--accent-3);">${total}</span>
+      </div>
+      <div style="background:var(--bg-card);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;font-size:0.83rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt-300);">Order ID</span><span style="color:var(--txt-900);font-weight:600;">ORD-${String(id).padStart(3,'0')}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt-300);">Quantity</span><span style="color:var(--txt-900);font-weight:600;">${qty}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt-300);">Status</span><span style="color:#2dd4bf;font-weight:600;">${status.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt-300);">Payment</span><span style="color:var(--txt-900);font-weight:600;">${payment.toUpperCase()}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt-300);">Date</span><span style="color:var(--txt-900);font-weight:600;">${date}</span></div>
+      </div>
+      <div style="background:var(--bg-card);border-radius:10px;padding:14px;font-size:0.83rem;">
+        <div style="color:var(--txt-300);margin-bottom:4px;">📍 Delivery Address</div>
+        <div style="color:var(--txt-900);line-height:1.5;">${address}</div>
+      </div>
+    </div>`;
+  document.getElementById('modalTrackBtn').href = '/order/track/' + id;
+  // Hide track button if delivered or cancelled
+  document.getElementById('modalTrackBtn').style.display =
+    ['delivered','cancelled'].includes(status) ? 'none' : 'block';
+  const modal = document.getElementById('orderModal');
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('orderModal').style.display = 'none';
+}
+
+// Close modal on backdrop click
+document.getElementById('orderModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

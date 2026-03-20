@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}My Orders — AgroConnect{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">📦 My Orders</h4>
+      <small class="text-muted">{{ orders|length }} order{{ 's' if orders|length != 1 }}</small>
+    </div>
+    <a href="{{ url_for('buyer.marketplace') }}" class="btn btn-success fw-bold px-4">+ Shop More</a>
+  </div>
+
+  {% if not orders %}
+  <div class="card shadow-sm text-center py-5">
+    <div style="font-size:70px;">📭</div>
+    <h5 class="fw-bold mt-3">No orders yet!</h5>
+    <p class="text-muted">Start shopping fresh farm produce!</p>
+    <a href="{{ url_for('buyer.marketplace') }}" class="btn btn-success px-5 mt-2">Browse Marketplace</a>
+  </div>
+
+  {% else %}
+
+  <!-- Filter Tabs -->
+  <ul class="nav nav-pills mb-4 gap-2" id="orderTabs">
+    <li class="nav-item"><a class="nav-link active" href="#" data-filter="all">All Orders</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-filter="confirmed">Confirmed</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-filter="out_for_delivery">Out for Delivery</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-filter="delivered">Delivered</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-filter="cancelled">Cancelled</a></li>
+  </ul>
+
+  <div id="ordersList">
+    {% for order in orders %}
+    <div class="card shadow-sm mb-3 order-card" data-status="{{ order.status }}">
+      <div class="card-body p-0">
+
+        <!-- Order Header -->
+        <div class="d-flex align-items-center justify-content-between px-4 py-3"
+             style="background:#f8fdf9; border-bottom:1px solid #e5e7eb; border-radius:10px 10px 0 0;">
+          <div class="d-flex gap-4 flex-wrap">
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Order ID</div>
+              <div class="fw-bold" style="font-size:14px;">#{{ order.order_id }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Placed On</div>
+              <div class="fw-bold" style="font-size:14px;">{{ order.created_at.strftime('%d %b %Y') }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Total</div>
+              <div class="fw-bold text-success" style="font-size:14px;">₹{{ order.total_price|int }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Payment</div>
+              <div class="fw-bold text-capitalize" style="font-size:14px;">{{ order.payment_method or 'COD' }}</div>
+            </div>
+          </div>
+          <!-- Status Badge -->
+          <div>
+            {% if order.status == 'delivered' %}
+              <span class="badge px-3 py-2" style="background:#dcfce7;color:#15803d;font-size:12px;border-radius:20px;">✅ Delivered</span>
+            {% elif order.status == 'out_for_delivery' %}
+              <span class="badge px-3 py-2" style="background:#dbeafe;color:#1d4ed8;font-size:12px;border-radius:20px;">🚚 Out for Delivery</span>
+            {% elif order.status == 'packed' %}
+              <span class="badge px-3 py-2" style="background:#fef9c3;color:#92400e;font-size:12px;border-radius:20px;">📦 Packed</span>
+            {% elif order.status == 'farmer_confirmed' %}
+              <span class="badge px-3 py-2" style="background:#f3e8ff;color:#7c3aed;font-size:12px;border-radius:20px;">🧑‍🌾 Farmer Confirmed</span>
+            {% elif order.status == 'cancelled' %}
+              <span class="badge px-3 py-2" style="background:#fee2e2;color:#dc2626;font-size:12px;border-radius:20px;">❌ Cancelled</span>
+            {% else %}
+              <span class="badge px-3 py-2" style="background:#d1fae5;color:#065f46;font-size:12px;border-radius:20px;">📋 Confirmed</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Product Row -->
+        <div class="d-flex align-items-center px-4 py-3 gap-3">
+          <img src="{{ url_for('static', filename='images/' ~ (order.product.image or 'logo.png')) }}"
+               style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;flex-shrink:0;"
+               onerror="this.src='/static/images/logo.png'">
+          <div class="flex-grow-1">
+            <div class="fw-bold fs-6">{{ order.product.crop_name }}</div>
+            <div style="font-size:13px;color:#6b7280;margin-top:2px;">
+              🧑‍🌾 {{ order.product.farmer.name }}
+              &nbsp;·&nbsp; {{ order.quantity|int }} {{ order.product.unit or 'kg' }}
+              &nbsp;·&nbsp; ₹{{ order.product.price }}/{{ order.product.unit or 'kg' }}
+            </div>
+            {% if order.status not in ['delivered', 'cancelled'] %}
+            <div style="font-size:12px;color:#16a34a;margin-top:4px;font-weight:600;">
+              🚚 Expected delivery within 24 hours
+            </div>
+            {% elif order.status == 'delivered' %}
+            <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+              Delivered on {{ order.created_at.strftime('%d %b %Y') }}
+            </div>
+            {% endif %}
+          </div>
+          <!-- Action Buttons -->
+          <div class="d-flex flex-column gap-2" style="min-width:140px;">
+            {% if order.status not in ['delivered', 'cancelled'] %}
+            <a href="{{ url_for('buyer.order_track', order_id=order.order_id) }}"
+               class="btn btn-success btn-sm fw-bold">📍 Track Order</a>
+            {% endif %}
+            {% if order.status == 'delivered' %}
+            <a href="{{ url_for('buyer.review', order_id=order.order_id) }}"
+               class="btn btn-success btn-sm fw-bold">⭐ Write Review</a>
+            <a href="{{ url_for('buyer.add_to_cart', product_id=order.product_id) }}"
+               class="btn btn-outline-success btn-sm fw-bold">🔄 Buy Again</a>
+            {% endif %}
+            {% if order.status == 'confirmed' %}
+            <button class="btn btn-outline-danger btn-sm fw-bold"
+                    onclick="confirmCancel({{ order.order_id }})">Cancel Order</button>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Address Footer -->
+        <div class="px-4 pb-3 pt-2" style="border-top:1px solid #f3f4f6;">
+          <small class="text-muted">
+            <i class="fas fa-map-marker-alt me-1 text-success"></i>{{ order.delivery_address }}
+          </small>
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">Cancel Order?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-muted">Are you sure you want to cancel? This cannot be undone.</div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Order</button>
+        <form id="cancelForm" method="POST">
+          <button type="submit" class="btn btn-danger fw-bold">Yes, Cancel</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('[data-filter]').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('[data-filter]').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      const filter = this.dataset.filter;
+      document.querySelectorAll('.order-card').forEach(card => {
+        card.style.display = (filter === 'all' || card.dataset.status === filter) ? 'block' : 'none';
+      });
+    });
+  });
+
+  function confirmCancel(orderId) {
+    document.getElementById('cancelForm').action = '/order/cancel/' + orderId;
+    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+  }
+</script>
+{% endblock %}

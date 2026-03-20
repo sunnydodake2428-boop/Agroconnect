@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Add New Crop — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">Farmer Portal</div>
+    <h1 style="font-size:2rem;margin-bottom:4px;">Add New Crop</h1>
+    <p>List your fresh produce for buyers</p>
+  </div>
+</div>
+
+<div class="page-body" style="padding-top:36px;">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-xl-7">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}
+        <div class="{{ 'alert-success-mint' if cat=='success' else 'alert-error-mint' }}" style="margin-bottom:18px;">{{ msg }}</div>
+        {% endfor %}{% endif %}{% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+
+          <!-- MAIN FORM CARD -->
+          <div class="form-card">
+
+            <!-- Photo upload -->
+            <div class="field-wrap">
+              <label class="field-label">Crop Images</label>
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div class="upload-box" id="uploadBox" onclick="document.getElementById('imgInput').click()">
+                  <div id="uploadIcon" style="text-align:center;">
+                    <svg width="26" height="26" fill="none" viewBox="0 0 24 24" style="margin-bottom:5px;"><rect x="3" y="3" width="18" height="18" rx="4" stroke="var(--accent)" stroke-width="1.5"/><path d="M12 8v8M8 12h8" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <div style="font-size:0.65rem;color:var(--accent);font-weight:700;line-height:1.2;">Add Photo</div>
+                  </div>
+                  <img id="imgPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;">
+                </div>
+                <input type="file" id="imgInput" name="image" accept="image/*" style="display:none;"
+                       onchange="if(this.files[0]){var r=new FileReader();r.onload=function(e){var p=document.getElementById('imgPreview');p.src=e.target.result;p.style.display='block';document.getElementById('uploadIcon').style.display='none';};r.readAsDataURL(this.files[0]);}">
+              </div>
+              <p style="font-size:0.74rem;color:var(--txt-300);margin-top:8px;">Upload up to 5 images of your crop</p>
+            </div>
+
+            <!-- Name + Category -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="field-label">Crop Name <span class="req">*</span></label>
+                  <input type="text" name="crop_name" required placeholder="e.g., Organic Tomatoes" class="field-input">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="field-label">Category <span class="req">*</span></label>
+                  <select name="category" required class="field-input field-select">
+                    <option value="">Select category</option>
+                    <option value="vegetables">{{ t('cat_vegetables') }}</option>
+                    <option value="fruits">{{ t('cat_fruits') }}</option>
+                    <option value="grains">{{ t('cat_grains') }}</option>
+                    <option value="flowers">{{ t('cat_flowers') }}</option>
+                    <option value="dairy">{{ t('cat_dairy') }}</option>
+                    <option value="spices">{{ t('cat_spices') }}</option>
+                    <option value="other">{{ t('cat_other') }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="field-wrap">
+              <label class="field-label">Description</label>
+              <textarea name="description" rows="4" placeholder="Describe your crop, growing methods, quality, etc." class="field-input field-textarea"></textarea>
+            </div>
+
+            <!-- Qty + Price + Min Order -->
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="field-label">Quantity Available (kg) <span class="req">*</span></label>
+                  <input type="number" name="quantity" required placeholder="1000" min="1" class="field-input">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="field-label">Price per kg (₹) <span class="req">*</span></label>
+                  <input type="number" name="price" required placeholder="50" step="0.01" min="0" class="field-input">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="field-label">Minimum Order (kg)</label>
+                  <input type="number" name="min_order" placeholder="10" min="1" class="field-input">
+                </div>
+              </div>
+            </div>
+
+            <!-- Location + Harvest Date -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="field-label">Location <span class="req">*</span></label>
+                  <input type="text" name="location_tag" placeholder="e.g., Punjab, India" class="field-input">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="field-label">Harvest Date</label>
+                  <input type="date" name="harvest_date" class="field-input" style="cursor:pointer;">
+                </div>
+              </div>
+            </div>
+
+            <input type="hidden" name="unit" value="kg">
+
+            <!-- Certifications -->
+            <div class="field-wrap" style="margin-bottom:0;">
+              <label class="field-label">Certifications (Optional)</label>
+              <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                {% for cert in ['Organic Certified','Pesticide Free','Non-GMO'] %}
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:var(--txt-500);font-weight:500;">
+                  <input type="checkbox" name="certifications" value="{{ cert }}" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                  {{ cert }}
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- ADDITIONAL INFO CARD -->
+          <div class="form-card">
+            <div style="font-size:0.92rem;font-weight:700;color:var(--txt-900);margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+              <span style="width:4px;height:18px;background:var(--accent);border-radius:2px;display:inline-block;"></span>
+              Additional Information
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-wrap" style="margin-bottom:0;">
+                  <label class="field-label">Variety</label>
+                  <input type="text" name="variety" placeholder="e.g., Cherry Tomatoes" class="field-input">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap" style="margin-bottom:0;">
+                  <label class="field-label">Packaging Available</label>
+                  <select name="packaging" class="field-input field-select">
+                    <option value="">Select option</option>
+                    <option value="loose">Loose</option>
+                    <option value="bags_10kg">10 kg Bags</option>
+                    <option value="bags_25kg">25 kg Bags</option>
+                    <option value="boxes">Boxes</option>
+                    <option value="crates">Crates</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:14px;font-size:0.78rem;color:var(--txt-300);">
+              Not sure about price? <a href="/price-predictor" style="color:var(--accent-3);font-weight:700;text-decoration:none;">Check Price Predictor →</a>
+            </div>
+          </div>
+
+          <!-- ACTION BUTTONS -->
+          <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn-green" style="flex:1;justify-content:center;padding:15px;font-size:0.95rem;border-radius:var(--r-md);">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              List Crop
+            </button>
+            <button type="button" class="btn-outline" style="padding:15px 28px;font-size:0.92rem;border-radius:var(--r-md);">Save as Draft</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

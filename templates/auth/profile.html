@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}My Account — AgroConnect{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div class="container" style="position:relative;z-index:2;">
+    <div class="page-hdr-eyebrow">Account Settings</div>
+    <h2 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:4px;">My Profile</h2>
+    <p style="color:rgba(255,255,255,0.55);">Manage your account details and security</p>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container" style="max-width:780px;">
+
+    <!-- PROFILE CARD -->
+    <div class="panel mb-4">
+      <div style="padding:28px 28px 0;">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <!-- Avatar -->
+          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#2dd4bf);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:#0a1f12;flex-shrink:0;">
+            {{ user.name[:1]|upper }}
+          </div>
+          <div>
+            <div style="font-size:1.3rem;font-weight:700;color:var(--txt-900);">{{ user.name }}</div>
+            <div style="font-size:0.88rem;color:var(--txt-300);margin-top:3px;">{{ user.email }}</div>
+            <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:4px 12px;border-radius:100px;margin-top:8px;display:inline-block;
+              {% if user.role == 'farmer' %}background:rgba(45,212,191,0.12);color:#2dd4bf;border:1px solid rgba(45,212,191,0.25);
+              {% else %}background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);{% endif %}">
+              {{ user.role|title }}
+            </span>
+          </div>
+          <div style="margin-left:auto;font-size:0.78rem;color:var(--txt-300);">
+            Member since {{ user.created_at.strftime('%B %Y') }}
+          </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar" style="margin-top:24px;">
+          <button class="tab-btn active" onclick="showTab('details', this)">Account Details</button>
+          <button class="tab-btn" onclick="showTab('password', this)">Change Password</button>
+          <button class="tab-btn" onclick="showTab('security', this)">Security Info</button>
+        </div>
+      </div>
+
+      <!-- ── TAB: ACCOUNT DETAILS ── -->
+      <div id="tab-details" style="padding:28px;">
+        <form method="POST" action="/account/update-profile">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Full Name</label>
+              <input type="text" name="name" value="{{ user.name }}"
+                style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div class="col-md-6">
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Email Address</label>
+              <input type="email" name="email" value="{{ user.email }}"
+                style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div class="col-md-6">
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Phone Number</label>
+              <input type="text" name="phone" value="{{ user.phone or '' }}"
+                style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div class="col-md-6">
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Location</label>
+              <input type="text" name="location" value="{{ user.location or '' }}" placeholder="e.g. Pune, Maharashtra"
+                style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button type="submit" class="btn-green" style="border-radius:var(--r-pill);padding:11px 28px;">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ── TAB: CHANGE PASSWORD ── -->
+      <div id="tab-password" style="padding:28px;display:none;">
+        <form method="POST" action="/account/change-password">
+          <div style="max-width:440px;display:flex;flex-direction:column;gap:18px;">
+
+            <div>
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Current Password</label>
+              <div style="position:relative;">
+                <input type="password" name="current_password" id="cur_pw" required placeholder="Enter current password"
+                  style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 44px 12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                  onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+                <span onclick="togglePw('cur_pw',this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--txt-300);font-size:0.9rem;">👁</span>
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">New Password</label>
+              <div style="position:relative;">
+                <input type="password" name="new_password" id="new_pw" required placeholder="Min 6 characters"
+                  style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 44px 12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                  onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'"
+                  oninput="checkStrength(this.value)">
+                <span onclick="togglePw('new_pw',this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--txt-300);font-size:0.9rem;">👁</span>
+              </div>
+              <!-- Strength bar -->
+              <div style="margin-top:8px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;">
+                <div id="strengthBar" style="height:100%;width:0%;border-radius:4px;transition:all 0.3s;background:#ef4444;"></div>
+              </div>
+              <div id="strengthText" style="font-size:0.72rem;color:var(--txt-300);margin-top:4px;"></div>
+            </div>
+
+            <div>
+              <label style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--txt-300);margin-bottom:6px;display:block;">Confirm New Password</label>
+              <div style="position:relative;">
+                <input type="password" name="confirm_password" id="conf_pw" required placeholder="Repeat new password"
+                  style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 44px 12px 16px;color:var(--txt-900);font-size:0.92rem;outline:none;"
+                  onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+                <span onclick="togglePw('conf_pw',this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--txt-300);font-size:0.9rem;">👁</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-green" style="border-radius:var(--r-pill);padding:11px 28px;width:fit-content;">
+              Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ── TAB: SECURITY INFO ── -->
+      <div id="tab-security" style="padding:28px;display:none;">
+        <div style="display:flex;flex-direction:column;gap:16px;max-width:500px;">
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--txt-900);">User ID</div>
+              <div style="font-size:0.82rem;color:var(--txt-300);margin-top:3px;">#{{ user.user_id }}</div>
+            </div>
+            <span style="font-size:1.2rem;">🆔</span>
+          </div>
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--txt-900);">Email</div>
+              <div style="font-size:0.82rem;color:var(--txt-300);margin-top:3px;">{{ user.email }}</div>
+            </div>
+            <span style="font-size:1.2rem;">📧</span>
+          </div>
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--txt-900);">Password</div>
+              <div style="font-size:0.82rem;color:var(--txt-300);margin-top:3px;">●●●●●●●● (hashed &amp; secure)</div>
+            </div>
+            <button onclick="showTab('password', document.querySelectorAll('.tab-btn')[1])"
+              style="font-size:0.78rem;font-weight:700;color:#2dd4bf;background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.25);padding:7px 14px;border-radius:var(--r-sm);cursor:pointer;">
+              Change
+            </button>
+          </div>
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--txt-900);">Account Role</div>
+              <div style="font-size:0.82rem;color:var(--txt-300);margin-top:3px;">{{ user.role|title }} Account</div>
+            </div>
+            <span style="font-size:1.2rem;">{% if user.role == 'farmer' %}🌾{% else %}🛒{% endif %}</span>
+          </div>
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--txt-900);">Member Since</div>
+              <div style="font-size:0.82rem;color:var(--txt-300);margin-top:3px;">{{ user.created_at.strftime('%d %B %Y') }}</div>
+            </div>
+            <span style="font-size:1.2rem;">📅</span>
+          </div>
+
+          <!-- Danger zone -->
+          <div style="margin-top:12px;padding:20px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18);border-radius:var(--r-md);">
+            <div style="font-size:0.82rem;font-weight:700;color:#f87171;margin-bottom:6px;">Danger Zone</div>
+            <div style="font-size:0.80rem;color:var(--txt-300);margin-bottom:14px;">Logging out will end your current session.</div>
+            <a href="/logout"
+              style="font-size:0.82rem;font-weight:700;color:#f87171;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);padding:9px 20px;border-radius:var(--r-sm);text-decoration:none;display:inline-block;">
+              🚪 Logout
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function showTab(name, el) {
+  ['details','password','security'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).style.display = 'block';
+  el.classList.add('active');
+}
+
+function togglePw(id, icon) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  icon.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function checkStrength(val) {
+  const bar = document.getElementById('strengthBar');
+  const txt = document.getElementById('strengthText');
+  if (!val) { bar.style.width='0%'; txt.textContent=''; return; }
+  let score = 0;
+  if (val.length >= 6)  score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    {w:'20%', c:'#ef4444', t:'Very Weak'},
+    {w:'40%', c:'#f97316', t:'Weak'},
+    {w:'60%', c:'#eab308', t:'Fair'},
+    {w:'80%', c:'#22c55e', t:'Strong'},
+    {w:'100%',c:'#2dd4bf', t:'Very Strong'},
+  ];
+  const l = levels[Math.min(score-1, 4)] || levels[0];
+  bar.style.width  = l.w;
+  bar.style.background = l.c;
+  txt.textContent  = l.t;
+  txt.style.color  = l.c;
+}
+</script>
+{% endblock %}
