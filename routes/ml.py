@@ -14,8 +14,8 @@ ml = Blueprint('ml', __name__)
 WEATHER_API_KEY       = 'ac2393b20e59d2176ba0938bc79029e3'
 AGMARKNET_API_KEY     = os.environ.get('AGMARKNET_API_KEY', '579b464db66ec23bdd000001f19d95480291496e59a48e773ea31015')
 AGMARKNET_RESOURCE_ID = '9ef84268-d588-465a-a308-a864a43d0070'
-GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY", "")
-GROQ_API_KEY          = os.environ.get("GROQ_API_KEY", "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")
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GROQ_API_KEY   = os.environ.get('GROQ_API_KEY', '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')
 
 
 # ============================================================
@@ -229,11 +229,112 @@ def _detect_with_groq(image_bytes, media_type):
 
 
 def _detect_with_gemini(image_bytes, media_type):
-    return None  # Gemini blocked on Railway IPs
+    import base64
+    if not GEMINI_API_KEY:
+        print('[GEMINI] No API key set')
+        return None
+    if not media_type:
+        media_type = 'image/jpeg'
+
+    GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest']
+    GEMINI_PROMPT = (
+        "You are an expert Indian agricultural crop identifier. "
+        "Look at this image carefully and identify which ONE crop is shown. "
+        "Reply with ONLY one word from this exact list (no other text, no punctuation): "
+        + ', '.join(SUPPORTED_CROPS)
+    )
+
+    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+    for model in GEMINI_MODELS:
+        try:
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}'
+            payload = {
+                'contents': [{'parts': [
+                    {'inline_data': {'mime_type': media_type, 'data': image_b64}},
+                    {'text': GEMINI_PROMPT}
+                ]}],
+                'generationConfig': {'maxOutputTokens': 20, 'temperature': 0.0}
+            }
+            resp = requests.post(url, json=payload, timeout=30)
+            print(f'[GEMINI] {model} status={resp.status_code}')
+            if resp.status_code in (404, 429): continue
+            if resp.status_code in (400, 401, 403):
+                print(f'[GEMINI] Error: {resp.text[:200]}')
+                continue
+            if resp.status_code != 200: continue
+            data = resp.json()
+            candidates = data.get('candidates', [])
+            if not candidates: continue
+            if candidates[0].get('finishReason') == 'SAFETY': continue
+            raw_text = candidates[0]['content']['parts'][0]['text']
+            print(f'[GEMINI] Raw: {raw_text}')
+            result = _parse_response(raw_text.strip().lower())
+            print(f'[GEMINI] Parsed: {result}')
+            if result and result in SUPPORTED_CROPS:
+                return result
+        except Exception as e:
+            print(f'[GEMINI ERROR] {model}: {e}')
+            continue
+    return None
 
 
 def _detect_with_clip(image_bytes):
-    return None  # HuggingFace endpoints dead
+    import base64
+    CROP_LABELS = [
+        'tomato vegetable','potato vegetable','onion vegetable','garlic bulb',
+        'ginger root','brinjal eggplant','green capsicum','red chilli pepper',
+        'cauliflower vegetable','cabbage vegetable','spinach leaves',
+        'carrot vegetable','radish vegetable','beetroot vegetable',
+        'okra ladyfinger','green peas','cucumber vegetable','pumpkin vegetable',
+        'watermelon fruit','mango fruit','banana fruit','apple fruit',
+        'grapes fruit','orange fruit','papaya fruit','wheat grain',
+        'rice grain','corn maize','rose flower','marigold flower',
+        'jasmine flower','sunflower flower',
+    ]
+    LABEL_TO_CROP = {
+        'tomato vegetable':'tomato','potato vegetable':'potato',
+        'onion vegetable':'onion','garlic bulb':'garlic','ginger root':'ginger',
+        'brinjal eggplant':'brinjal','green capsicum':'capsicum',
+        'red chilli pepper':'chilli','cauliflower vegetable':'cauliflower',
+        'cabbage vegetable':'cabbage','spinach leaves':'spinach',
+        'carrot vegetable':'carrot','radish vegetable':'radish',
+        'beetroot vegetable':'beetroot','okra ladyfinger':'okra',
+        'green peas':'peas','cucumber vegetable':'cucumber',
+        'pumpkin vegetable':'pumpkin','watermelon fruit':'watermelon',
+        'mango fruit':'mango','banana fruit':'banana','apple fruit':'apple',
+        'grapes fruit':'grapes','orange fruit':'orange','papaya fruit':'papaya',
+        'wheat grain':'wheat','rice grain':'rice','corn maize':'corn',
+        'rose flower':'rose','marigold flower':'marigold',
+        'jasmine flower':'jasmine','sunflower flower':'sunflower',
+    }
+    try:
+        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+        resp = requests.post(
+            'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
+            headers={'Content-Type': 'application/json'},
+            json={'inputs': image_b64, 'parameters': {'candidate_labels': CROP_LABELS}},
+            timeout=25
+        )
+        if resp.status_code == 503:
+            import time; time.sleep(15)
+            resp = requests.post(
+                'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
+                headers={'Content-Type': 'application/json'},
+                json={'inputs': image_b64, 'parameters': {'candidate_labels': CROP_LABELS}},
+                timeout=30
+            )
+        print(f'[CLIP] status={resp.status_code}')
+        if resp.status_code != 200: return None
+        results = resp.json()
+        if not isinstance(results, list) or not results: return None
+        best_label = results[0].get('label', '').lower().strip()
+        best_score = results[0].get('score', 0)
+        print(f'[CLIP] Best: {best_label} score={best_score:.2f}')
+        if best_score < 0.10: return None
+        return LABEL_TO_CROP.get(best_label)
+    except Exception as e:
+        print(f'[CLIP ERROR] {e}')
+        return None
 
 
 def _detect_from_filename(filename):
