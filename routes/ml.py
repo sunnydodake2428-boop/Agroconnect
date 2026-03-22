@@ -92,7 +92,8 @@ MAHARASHTRA_CITY_TO_MARKET = {
     'kolhapur':['Kolhapur','Ichalkaranji'],
     'pune':['Pune','Pimpri','Chinchwad','Hadapsar'],
     'nashik':['Nashik','Lasalgaon','Pimpalgaon'],
-    'mumbai':['Mumbai','Vashi','Dadar'],
+    'mumbai':['Mumbai','Vashi','Dadar','Nashik','Lasalgaon','Pune','Ahmednagar'],
+    # Mumbai sources produce from Nashik, Pune, Ahmednagar mandis
     'aurangabad':['Aurangabad','Chhatrapati Sambhajinagar'],
     'nagpur':['Nagpur','Kamptee'],
     'solapur':['Solapur','Pandharpur'],
@@ -324,11 +325,15 @@ def fetch_agmarknet_price(crop_name, user_city=None, state='Maharashtra'):
             rec     = valid[len(valid) // 2][1]
             modal_q = float(rec.get('modal_price', 0) or 0)
             if modal_q == 0: continue
+            raw_market = (f"{rec.get('market','')}, {rec.get('district','')}".strip(', ') or 'Maharashtra Mandi')
+            if user_city and 'mumbai' in user_city.lower():
+                if 'mumbai' not in raw_market.lower() and 'vashi' not in raw_market.lower():
+                    raw_market = raw_market + ' (Mumbai supply source)'
             return {
                 'modal_price': round(modal_q / 100, 2),
                 'min_price':   round(float(rec.get('min_price', 0) or 0) / 100, 2),
                 'max_price':   round(float(rec.get('max_price', 0) or 0) / 100, 2),
-                'market':      f"{rec.get('market','')}, {rec.get('district','')}".strip(', ') or 'Maharashtra Mandi',
+                'market':      raw_market,
                 'date':        rec.get('arrival_date', str(datetime.date.today())),
                 'source':      'agmarknet', 'state': rec.get('state', 'Maharashtra'),
             }
