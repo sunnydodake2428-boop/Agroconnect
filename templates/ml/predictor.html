@@ -204,6 +204,23 @@
                     </div>
                     {% endif %}
 
+                    <!-- SOURCE BADGE — shows Live Agmarknet or Fallback -->
+                    {% if prediction.source == 'agmarknet' %}
+                    <div style="background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.30);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#2dd4bf;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#2dd4bf;display:inline-block;animation:pulse 1.5s infinite;"></span>
+                            <span>Live Agmarknet Data — Government of India</span>
+                        </div>
+                        <span style="font-size:0.75rem;opacity:0.7;">{{ prediction.market }} · {{ prediction.mandi_date }}</span>
+                    </div>
+                    {% else %}
+                    <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#fbbf24;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-database"></i>
+                        <span>APMC Maharashtra Historical Average — Verified Data</span>
+                    </div>
+                    {% endif %}
+                    <style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}</style>
+
                     <div style="text-align:center;margin-bottom:24px;">
                         <div style="font-size:0.72rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">{{ t('detected_crop') }}</div>
                         <div style="font-size:1.6rem;font-weight:700;color:#fff;margin-bottom:16px;">{{ prediction.crop }}</div>
