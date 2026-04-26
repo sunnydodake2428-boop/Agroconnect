@@ -24,8 +24,8 @@
           {% for item in cart_items %}
           <div class="d-flex align-items-center p-3 border-bottom gap-3">
             <img src="{{ url_for('static', filename='images/' ~ (item.product.image or 'default_crop.jpg')) }}"
-                 style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;"
-                 onerror="this.src='/static/images/logo.png'">
+              style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;"
+              onerror="this.src='/static/images/logo.png'">
             <div class="flex-grow-1">
               <h6 class="mb-1 fw-bold">{{ item.product.crop_name }}</h6>
               <small class="text-muted">🧑‍🌾 {{ item.product.farmer.name }}</small><br>
@@ -33,12 +33,14 @@
               <div class="mt-2 d-flex align-items-center gap-2">
                 <form method="POST" action="{{ url_for('buyer.update_cart', item_id=item.cart_id) }}" class="d-inline">
                   <input type="hidden" name="action" value="decrease">
-                  <button class="btn btn-outline-success btn-sm rounded-circle" style="width:30px;height:30px;padding:0;">−</button>
+                  <button class="btn btn-outline-success btn-sm rounded-circle"
+                    style="width:30px;height:30px;padding:0;">−</button>
                 </form>
                 <span class="fw-bold px-2 fs-6">{{ item.quantity|int }}</span>
                 <form method="POST" action="{{ url_for('buyer.update_cart', item_id=item.cart_id) }}" class="d-inline">
                   <input type="hidden" name="action" value="increase">
-                  <button class="btn btn-outline-success btn-sm rounded-circle" style="width:30px;height:30px;padding:0;">+</button>
+                  <button class="btn btn-outline-success btn-sm rounded-circle"
+                    style="width:30px;height:30px;padding:0;">+</button>
                 </form>
                 <span class="text-muted">{{ item.product.unit or 'kg' }}</span>
               </div>
@@ -46,8 +48,10 @@
             <div class="text-end flex-shrink-0">
               <div class="fw-bold text-success fs-5">₹{{ (item.product.price * item.quantity)|int }}</div>
               {% if item.product.mrp and item.product.mrp > item.product.price %}
-              <small class="text-muted text-decoration-line-through">₹{{ (item.product.mrp * item.quantity)|int }}</small><br>
-              <small class="text-danger fw-bold">{{ ((1 - item.product.price / item.product.mrp) * 100)|int }}% off</small>
+              <small class="text-muted text-decoration-line-through">₹{{ (item.product.mrp * item.quantity)|int
+                }}</small><br>
+              <small class="text-danger fw-bold">{{ ((1 - item.product.price / item.product.mrp) * 100)|int }}%
+                off</small>
               {% endif %}
               <div class="mt-2">
                 <form method="POST" action="{{ url_for('buyer.update_cart', item_id=item.cart_id) }}">
@@ -90,7 +94,9 @@
     {% if cart_items %}
     <div class="col-lg-4">
       <div class="card shadow-sm mb-3">
-        <div class="card-header"><h6 class="mb-0 fw-bold">🧾 Price Details</h6></div>
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold">🧾 Price Details</h6>
+        </div>
         <div class="card-body">
           <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">Price ({{ cart_items|length }} items)</span>
@@ -124,7 +130,8 @@
             🎉 You save ₹{{ (discount + coupon_discount)|int }} on this order!
           </div>
           {% endif %}
-          <a href="{{ url_for('buyer.checkout_address') }}" class="btn btn-success w-100 fw-bold">Proceed to Checkout →</a>
+          <a href="{{ url_for('buyer.checkout_address') }}" class="btn btn-success w-100 fw-bold">Proceed to Checkout
+            →</a>
         </div>
       </div>
       <div class="card shadow-sm">

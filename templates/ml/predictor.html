@@ -206,12 +206,20 @@
 
                     <!-- SOURCE BADGE — shows Live Agmarknet or Fallback -->
                     {% if prediction.source == 'agmarknet' %}
-                    <div style="background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.30);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#2dd4bf;display:flex;align-items:center;justify-content:space-between;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="width:8px;height:8px;border-radius:50%;background:#2dd4bf;display:inline-block;animation:pulse 1.5s infinite;"></span>
-                            <span>Live Agmarknet Data — Government of India</span>
+                    <div style="background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.30);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#2dd4bf;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#2dd4bf;display:inline-block;animation:pulse 1.5s infinite;flex-shrink:0;"></span>
+                                <span style="font-weight:700;">Live Agmarknet Data — Government of India</span>
+                            </div>
+                            <span style="font-size:0.75rem;opacity:0.7;">{{ prediction.mandi_date }}</span>
                         </div>
-                        <span style="font-size:0.75rem;opacity:0.7;">{{ prediction.market }} · {{ prediction.mandi_date }}</span>
+                        <div style="margin-top:6px;font-size:0.78rem;color:rgba(45,212,191,0.80);padding-left:16px;">
+                            📍 {{ prediction.market }}
+                            {% if 'supply source' in prediction.market %}
+                            <span style="color:rgba(255,255,255,0.40);font-size:0.72rem;"> — Mumbai sources produce from this mandi</span>
+                            {% endif %}
+                        </div>
                     </div>
                     {% else %}
                     <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#fbbf24;display:flex;align-items:center;gap:8px;">
