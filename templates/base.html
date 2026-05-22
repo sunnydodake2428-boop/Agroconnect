@@ -463,6 +463,79 @@
             }
         });
     </script>
+    <script>
+const TRANS = {
+  en: {}, // English is default
+  hi: {
+    'Marketplace':'बाज़ार','Dashboard':'डैशबोर्ड','My Orders':'मेरे ऑर्डर',
+    'Track Order':'ट्रैक करें','Place Order':'ऑर्डर दें','Add to Cart':'कार्ट में जोड़ें',
+    'Logout':'लॉगआउट','Login':'लॉगिन','Search':'खोजें','Buy Now':'अभी खरीदें',
+    'Total':'कुल','Cancel':'रद्द करें','Confirm':'पुष्टि करें','Dispatch':'भेजें',
+    'Delivered':'डिलीवर हुआ','Pending':'लंबित','Submit Review':'समीक्षा भेजें',
+    'Rate Farmer':'किसान रेट करें','View Details':'विवरण देखें','Reorder':'फिर से ऑर्डर',
+    'Price Predictor':'मूल्य भविष्यवक्ता','Best Time to Sell':'बेचने का सही समय',
+    'Add New Crop':'नई फसल जोड़ें','Active Listings':'सक्रिय सूचियाँ',
+    'Incoming Orders':'आने वाले ऑर्डर','Total Earnings':'कुल कमाई',
+    'Browse Marketplace':'बाज़ार देखें','Your Cart':'आपका कार्ट',
+    'Delivery Address':'डिलीवरी पता','Order Summary':'ऑर्डर सारांश',
+    'Free':'मुफ़्त','Subtotal':'उप-योग','Remove':'हटाएं',
+    'Continue Shopping':'खरीदारी जारी रखें','Proceed to Checkout':'चेकआउट करें',
+    'Order Placed':'ऑर्डर दिया','Order Confirmed':'ऑर्डर पुष्टि','Dispatched':'भेजा गया',
+    'Order Tracking':'ऑर्डर ट्रैकिंग','Leave Review':'समीक्षा छोड़ें',
+    'Submit':'जमा करें','Save Changes':'परिवर्तन सहेजें','Change Password':'पासवर्ड बदलें',
+    'My Account':'मेरा खाता','Security Info':'सुरक्षा जानकारी',
+    'Account Details':'खाता विवरण','Member Since':'सदस्य बने',
+    'Upload Photo':'फोटो अपलोड','Predict Price':'कीमत जानें',
+    'Select Season':'मौसम चुनें','Quantity':'मात्रा',
+    'Detected Crop':'पहचानी फसल','Recommended Price':'अनुशंसित कीमत',
+    'Season Factor':'मौसम कारक','List Crop Now':'फसल सूचीबद्ध करें',
+    'Analyze':'विश्लेषण','Best Month':'सबसे अच्छा महीना',
+    'Current Price':'वर्तमान कीमत','Extra Profit':'अतिरिक्त लाभ',
+  },
+  mr: {
+    'Marketplace':'बाजार','Dashboard':'डॅशबोर्ड','My Orders':'माझे ऑर्डर',
+    'Track Order':'ट्रॅक करा','Place Order':'ऑर्डर द्या','Add to Cart':'कार्टमध्ये जोडा',
+    'Logout':'बाहेर पडा','Login':'लॉगिन','Search':'शोधा','Buy Now':'आत्ता खरेदी करा',
+    'Total':'एकूण','Cancel':'रद्द करा','Confirm':'पुष्टी करा','Dispatch':'पाठवा',
+    'Delivered':'वितरित','Pending':'प्रलंबित','Submit Review':'समीक्षा सादर करा',
+    'Rate Farmer':'शेतकरी रेट करा','View Details':'तपशील पहा','Reorder':'पुन्हा ऑर्डर',
+    'Price Predictor':'किंमत अंदाज','Best Time to Sell':'विक्रीची योग्य वेळ',
+    'Add New Crop':'नवीन पीक जोडा','Active Listings':'सक्रिय यादी',
+    'Incoming Orders':'येणारे ऑर्डर','Total Earnings':'एकूण कमाई',
+    'Browse Marketplace':'बाजार पहा','Your Cart':'तुमचा कार्ट',
+    'Delivery Address':'वितरण पत्ता','Order Summary':'ऑर्डर सारांश',
+    'Free':'मोफत','Subtotal':'उपएकूण','Remove':'काढा',
+    'Continue Shopping':'खरेदी सुरू ठेवा','Proceed to Checkout':'चेकआउट करा',
+    'Order Placed':'ऑर्डर दिला','Order Confirmed':'ऑर्डर पुष्टी','Dispatched':'पाठवले',
+    'Order Tracking':'ऑर्डर ट्रॅकिंग','Leave Review':'समीक्षा द्या',
+    'Submit':'सादर करा','Save Changes':'बदल जतन करा','Change Password':'पासवर्ड बदला',
+    'My Account':'माझे खाते','Security Info':'सुरक्षा माहिती',
+    'Account Details':'खाते तपशील','Member Since':'सदस्य पासून',
+    'Upload Photo':'फोटो अपलोड','Predict Price':'किंमत जाणा',
+    'Select Season':'हंगाम निवडा','Quantity':'प्रमाण',
+    'Detected Crop':'ओळखलेले पीक','Recommended Price':'शिफारस केलेली किंमत',
+    'Season Factor':'हंगाम घटक','List Crop Now':'पीक नोंदवा',
+    'Analyze':'विश्लेषण','Best Month':'सर्वोत्तम महिना',
+    'Current Price':'सध्याची किंमत','Extra Profit':'अतिरिक्त नफा',
+  }
+};
+
+// Auto-translate all text nodes on page load when language changes
+function applyTranslations(lang) {
+  if (lang === 'en') return;
+  const dict = TRANS[lang] || {};
+  document.querySelectorAll('button, a, label, th, .tab-btn, .btn-green, .btn-outline, .stat-label, h5, h6').forEach(el => {
+    const txt = el.innerText?.trim();
+    if (txt && dict[txt]) el.innerText = dict[txt];
+  });
+}
+
+// Run on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const lang = '{{ session.get("lang", "en") }}';
+  applyTranslations(lang);
+});
+</script> 
 </body>
 
 </html>
