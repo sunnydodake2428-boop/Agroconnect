@@ -33,7 +33,7 @@
         <div style="display:inline-block;padding:16px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.15);">
           <!-- Dynamic QR using Google Charts API -->
           <img id="qrImg"
-            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR&tn=AgroConnect Order Payment"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi%3A%2F%2Fpay%3Fpa%3Dagroconnect%40ybl%26pn%3DAgroConnect%26am%3D{{+total|int+}}%26cu%3DINR"
             alt="UPI QR Code"
             style="width:200px;height:200px;display:block;"
             onerror="this.src='/static/images/logo.png'">

@@ -74,10 +74,8 @@ def create_app():
 
 app = create_app()
 
-
 with app.app_context():
     db.create_all()
-    # Auto-migrate missing columns
     from sqlalchemy import text
     with db.engine.connect() as conn:
         for sql in [
@@ -89,8 +87,7 @@ with app.app_context():
             try:
                 conn.execute(text(sql))
                 conn.commit()
-            except:
-                pass
+            except: pass
 
 if __name__ == '__main__':
     app.run(debug=False)
