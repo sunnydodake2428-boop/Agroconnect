@@ -74,8 +74,23 @@ def create_app():
 
 app = create_app()
 
+
 with app.app_context():
     db.create_all()
+    # Auto-migrate missing columns
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        for sql in [
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id VARCHAR(100)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) DEFAULT 'cod'",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_group_id VARCHAR(20)",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS mrp FLOAT",
+        ]:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except:
+                pass
 
 if __name__ == '__main__':
     app.run(debug=False)
