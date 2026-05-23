@@ -3,7 +3,6 @@ from extensions import db, bcrypt
 from config import Config
 import os
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -33,6 +32,27 @@ def create_app():
         def t(key):
             return _t(key, lang)
         return dict(t=t, current_lang=lang)
+
+    @app.context_processor
+    def inject_nav_counts():
+        cart_count = 0
+        pending_orders_count = 0
+        if session.get('user_role') == 'buyer' and session.get('user_id'):
+            try:
+                from models import Cart, Order
+                cart_count = Cart.query.filter_by(buyer_id=session['user_id']).count()
+                pending_orders_count = Order.query.filter_by(
+                    buyer_id=session['user_id']
+                ).filter(Order.status.in_(['confirmed','farmer_confirmed','packed','out_for_delivery'])).count()
+            except: pass
+        if session.get('user_role') == 'farmer' and session.get('user_id'):
+            try:
+                from models import Order
+                pending_orders_count = Order.query.filter_by(
+                    farmer_id=session['user_id'], status='confirmed'
+                ).count()
+            except: pass
+        return dict(cart_count=cart_count, pending_orders_count=pending_orders_count)
 
     @app.route('/')
     def home():
