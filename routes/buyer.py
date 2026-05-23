@@ -203,7 +203,7 @@ def checkout_payment():
 
     return render_template('buyer/checkout_payment.html',
     ...existing params...,
-    razorpay_key_id=current_app.config['rzp_test_SsgiU47seL6deY']
+    razorpay_key_id=current_app.config['RAZORPAY_KEY_ID']
 )
 
 
