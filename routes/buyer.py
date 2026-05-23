@@ -1,11 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from extensions import db
 from functools import wraps
 from models import Order, Cart, Product, Address, Review
-import uuid
+import uuid, hmac, hashlib
 from datetime import datetime
-import hmac, hashlib
-from flask import current_app
 
 buyer = Blueprint('buyer', __name__)
 
@@ -67,7 +65,6 @@ def add_to_cart(product_id):
 def cart():
     buyer_id = session['user_id']
     cart_items = Cart.query.filter_by(buyer_id=buyer_id).all()
-
     subtotal  = sum(item.product.price * item.quantity for item in cart_items) if cart_items else 0
     mrp_total = sum((item.product.mrp or item.product.price) * item.quantity for item in cart_items) if cart_items else 0
     discount  = mrp_total - subtotal
@@ -75,24 +72,16 @@ def cart():
     coupon    = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
     total     = subtotal - coupon_discount + delivery
-
     return render_template('buyer/cart.html',
-        cart_items=cart_items,
-        subtotal=subtotal,
-        mrp_total=mrp_total,
-        discount=discount,
-        delivery=delivery,
-        coupon=coupon,
-        coupon_discount=coupon_discount,
-        total=total
-    )
+        cart_items=cart_items, subtotal=subtotal, mrp_total=mrp_total,
+        discount=discount, delivery=delivery, coupon=coupon,
+        coupon_discount=coupon_discount, total=total)
 
 
 # ─── UPDATE CART ─────────────────────────────────────────────────────────────
 @buyer.route('/cart/update/<int:item_id>', methods=['POST'])
 @buyer_required
 def update_cart(item_id):
-    # Cart PK is cart_id
     item = Cart.query.filter_by(cart_id=item_id, buyer_id=session['user_id']).first_or_404()
     action = request.form.get('action')
     if action == 'increase':
@@ -149,15 +138,15 @@ def add_address():
     buyer_id = session['user_id']
     is_first = Address.query.filter_by(buyer_id=buyer_id).count() == 0
     addr = Address(
-        buyer_id   = buyer_id,
-        full_name  = request.form['full_name'],
-        phone      = request.form['phone'],
-        line1      = request.form['line1'],
-        line2      = request.form.get('line2', ''),
-        city       = request.form['city'],
-        state      = request.form['state'],
-        pincode    = request.form['pincode'],
-        is_default = is_first
+        buyer_id=buyer_id,
+        full_name=request.form['full_name'],
+        phone=request.form['phone'],
+        line1=request.form['line1'],
+        line2=request.form.get('line2', ''),
+        city=request.form['city'],
+        state=request.form['state'],
+        pincode=request.form['pincode'],
+        is_default=is_first
     )
     db.session.add(addr)
     db.session.commit()
@@ -198,16 +187,87 @@ def checkout_payment():
         coupon=coupon,
         coupon_discount=coupon_discount,
         delivery=delivery,
-        total=total
+        total=total,
+        razorpay_key_id=current_app.config['RAZORPAY_KEY_ID']
     )
 
-    return render_template('buyer/checkout_payment.html',
-    ...existing params...,
-    razorpay_key_id=current_app.config['RAZORPAY_KEY_ID']
-)
+
+# ─── RAZORPAY: CREATE ORDER ───────────────────────────────────────────────────
+@buyer.route('/checkout/create-razorpay-order', methods=['POST'])
+@buyer_required
+def create_razorpay_order():
+    import razorpay
+    buyer_id   = session['user_id']
+    cart_items = Cart.query.filter_by(buyer_id=buyer_id).all()
+    if not cart_items:
+        return jsonify({'error': 'Empty cart'}), 400
+
+    subtotal        = sum(i.product.price * i.quantity for i in cart_items)
+    coupon          = session.get('coupon', {})
+    coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
+    delivery        = 0 if subtotal > 500 else 40
+    total           = subtotal - coupon_discount + delivery
+    amount_paise    = int(total * 100)
+
+    client = razorpay.Client(
+        auth=(current_app.config['RAZORPAY_KEY_ID'],
+              current_app.config['RAZORPAY_KEY_SECRET'])
+    )
+    order = client.order.create({'amount': amount_paise, 'currency': 'INR', 'payment_capture': 1})
+    return jsonify({'order_id': order['id'], 'amount': amount_paise})
 
 
-# ─── PLACE ORDER ─────────────────────────────────────────────────────────────
+# ─── RAZORPAY: CALLBACK ───────────────────────────────────────────────────────
+@buyer.route('/checkout/razorpay-callback', methods=['POST'])
+@buyer_required
+def razorpay_callback():
+    payment_id = request.form.get('razorpay_payment_id', '')
+    order_id   = request.form.get('razorpay_order_id', '')
+    signature  = request.form.get('razorpay_signature', '')
+
+    key_secret = current_app.config['RAZORPAY_KEY_SECRET'].encode()
+    msg        = f'{order_id}|{payment_id}'.encode()
+    expected   = hmac.new(key_secret, msg, hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(expected, signature):
+        flash('Payment verification failed. Please contact support.', 'danger')
+        return redirect(url_for('buyer.checkout_payment'))
+
+    buyer_id   = session['user_id']
+    cart_items = Cart.query.filter_by(buyer_id=buyer_id).all()
+    if not cart_items:
+        flash('Cart is empty.', 'warning')
+        return redirect(url_for('buyer.cart'))
+
+    address        = Address.query.get(session.get('selected_address_id'))
+    delivery_str   = f"{address.line1}, {address.line2 or ''}, {address.city}, {address.state} - {address.pincode}"
+    order_group_id = 'AGC' + str(uuid.uuid4())[:8].upper()
+
+    for item in cart_items:
+        order = Order(
+            order_group_id   = order_group_id,
+            buyer_id         = buyer_id,
+            farmer_id        = item.product.farmer_id,
+            product_id       = item.product_id,
+            quantity         = item.quantity,
+            total_price      = item.product.price * item.quantity,
+            delivery_address = delivery_str,
+            payment_method   = 'razorpay',
+            status           = 'confirmed',
+            created_at       = datetime.utcnow()
+        )
+        db.session.add(order)
+        db.session.delete(item)
+
+    session.pop('coupon', None)
+    session.pop('selected_address_id', None)
+    db.session.commit()
+
+    flash('Payment successful! Order placed 🎉', 'success')
+    return redirect(url_for('buyer.order_confirm', order_group_id=order_group_id))
+
+
+# ─── PLACE ORDER (COD) ────────────────────────────────────────────────────────
 @buyer.route('/checkout/place-order', methods=['POST'])
 @buyer_required
 def place_order():
@@ -223,12 +283,10 @@ def place_order():
 
     address        = Address.query.get(session['selected_address_id'])
     payment_method = request.form.get('payment_method', 'cod')
-
     subtotal        = sum(i.product.price * i.quantity for i in cart_items)
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
     delivery        = 0 if subtotal > 500 else 40
-
     order_group_id = 'AGC' + str(uuid.uuid4())[:8].upper()
     delivery_str   = f"{address.line1}, {address.line2 or ''}, {address.city}, {address.state} - {address.pincode}"
 
@@ -330,6 +388,3 @@ def review(order_id):
         flash('Review submitted! Thank you 🙏', 'success')
         return redirect(url_for('buyer.dashboard'))
     return render_template('buyer/review.html', order=order)
-
-
-
