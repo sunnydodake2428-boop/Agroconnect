@@ -36,6 +36,7 @@ class Order(db.Model):
     farmer_id        = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     product_id       = db.Column(db.Integer, db.ForeignKey('products.product_id'), nullable=False)
     quantity         = db.Column(db.Float)
+    payment_id       = db.Column(db.String(100))
     total_price      = db.Column(db.Float)
     delivery_address = db.Column(db.Text)
     payment_method   = db.Column(db.String(30), default='cod')

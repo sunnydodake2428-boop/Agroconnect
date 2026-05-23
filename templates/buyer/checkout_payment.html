@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% block title %}Payment — AgroConnect{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
 
   <!-- Step Bar -->
   <div class="checkout-steps mb-4">
@@ -13,129 +15,228 @@
     <div class="step">✅ Done</div>
   </div>
 
-  <div class="row">
+  <div class="row g-4">
+
+    <!-- LEFT: Payment Options -->
     <div class="col-lg-8">
-      <h5 class="fw-bold mb-3">💳 Choose Payment Method</h5>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💳 Choose Payment Method</span>
+          <span style="font-size:0.75rem;color:var(--txt-300);">🔒 256-bit SSL Secured</span>
+        </div>
+        <div style="padding:24px;">
 
-      <form method="POST" action="{{ url_for('buyer.place_order') }}">
-        <!-- UPI -->
-        <div class="card shadow-sm mb-3">
-          <div class="card-body">
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="payment_method" value="upi" id="upi" checked>
-              <label class="form-check-label fw-bold" for="upi">📱 UPI Payment</label>
-              <small class="text-muted d-block ms-4">Google Pay, PhonePe, Paytm, BHIM</small>
+          <!-- ── RAZORPAY (UPI / Card / Net Banking) ── -->
+          <div class="payment-option active" id="opt-razorpay" onclick="selectPayment('razorpay', this)">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:44px;height:44px;background:#072654;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="color:#fff;font-size:1.1rem;">💳</span>
+              </div>
+              <div>
+                <div style="font-weight:700;color:var(--txt-900);font-size:0.95rem;">Pay Online</div>
+                <div style="font-size:0.78rem;color:var(--txt-300);">UPI · Cards · Net Banking · Wallets</div>
+              </div>
+              <div class="ms-auto d-flex gap-1">
+                <img src="https://cdn.razorpay.com/logo.svg" alt="Razorpay" style="height:18px;opacity:0.7;">
+              </div>
             </div>
-            <div class="ms-4">
-              <input type="text" name="upi_id" class="form-control w-50" placeholder="yourname@upi">
-              <div class="d-flex gap-2 mt-2">
-                {% for app in ['Google Pay', 'PhonePe', 'Paytm'] %}
-                <button type="button" class="btn btn-outline-success btn-sm">{{ app }}</button>
-                {% endfor %}
+            <div class="payment-badges mt-3">
+              <span class="pay-badge">📱 UPI</span>
+              <span class="pay-badge">💳 Visa</span>
+              <span class="pay-badge">💳 Mastercard</span>
+              <span class="pay-badge">🏦 Net Banking</span>
+              <span class="pay-badge">👛 Wallets</span>
+            </div>
+          </div>
+
+          <!-- ── CASH ON DELIVERY ── -->
+          <div class="payment-option" id="opt-cod" onclick="selectPayment('cod', this)">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:44px;height:44px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:1.3rem;">💵</span>
+              </div>
+              <div>
+                <div style="font-weight:700;color:var(--txt-900);font-size:0.95rem;">Cash on Delivery</div>
+                <div style="font-size:0.78rem;color:var(--txt-300);">Pay in cash when order arrives</div>
+              </div>
+              <div class="ms-auto">
+                <span style="font-size:0.72rem;background:#f0fdf4;color:#16a34a;padding:3px 10px;border-radius:100px;font-weight:700;border:1px solid #bbf7d0;">No extra charges</span>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Card -->
-        <div class="card shadow-sm mb-3">
-          <div class="card-body">
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="payment_method" value="card" id="card">
-              <label class="form-check-label fw-bold" for="card">💳 Credit / Debit Card</label>
-              <small class="text-muted d-block ms-4">Visa, Mastercard, RuPay</small>
-            </div>
-            <div class="ms-4 row g-2">
-              <div class="col-12">
-                <input type="text" name="card_number" class="form-control" placeholder="Card Number" maxlength="19">
-              </div>
-              <div class="col-12">
-                <input type="text" name="card_name" class="form-control" placeholder="Name on Card">
-              </div>
-              <div class="col-6">
-                <input type="text" name="card_exp" class="form-control" placeholder="MM/YY" maxlength="5">
-              </div>
-              <div class="col-6">
-                <input type="password" name="card_cvv" class="form-control" placeholder="CVV" maxlength="3">
-              </div>
-            </div>
+          <!-- Security note -->
+          <div style="background:var(--bg-teal);border:1px solid rgba(45,212,191,0.25);border-radius:10px;padding:12px 16px;font-size:0.82rem;color:var(--accent-3);margin-top:16px;">
+            🔒 Payments powered by Razorpay. We never store your card details.
           </div>
-        </div>
 
-        <!-- COD -->
-        <div class="card shadow-sm mb-3">
-          <div class="card-body">
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="payment_method" value="cod" id="cod">
-              <label class="form-check-label fw-bold" for="cod">💵 Cash on Delivery</label>
-              <small class="text-muted d-block ms-4">Pay when your order arrives</small>
-            </div>
+          <!-- Action Buttons -->
+          <div class="d-flex gap-3 mt-4">
+            <a href="{{ url_for('buyer.checkout_address') }}" class="btn-outline">← Back</a>
+            <button id="payBtn" onclick="handlePayment()" class="btn-green flex-grow-1" style="justify-content:center;font-size:1rem;padding:14px;">
+              Pay ₹{{ total|int }} →
+            </button>
           </div>
-        </div>
 
-        <!-- Net Banking -->
-        <div class="card shadow-sm mb-3">
-          <div class="card-body">
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="payment_method" value="netbanking" id="nb">
-              <label class="form-check-label fw-bold" for="nb">🏦 Net Banking</label>
-            </div>
-            <div class="ms-4">
-              <select name="bank" class="form-select w-50">
-                <option>Select Your Bank</option>
-                {% for bank in ['State Bank of India','HDFC Bank','ICICI Bank','Axis Bank','Bank of Baroda'] %}
-                <option>{{ bank }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-        </div>
+          <!-- Hidden COD form -->
+          <form id="codForm" method="POST" action="{{ url_for('buyer.place_order') }}" style="display:none;">
+            <input type="hidden" name="payment_method" value="cod">
+          </form>
 
-        <!-- Security Note -->
-        <div class="alert alert-success py-2" style="font-size:13px;">
-          🔒 Your payment is encrypted with 256-bit SSL. We never store card details.
-        </div>
+          <!-- Hidden Razorpay success form -->
+          <form id="rzpForm" method="POST" action="{{ url_for('buyer.razorpay_callback') }}" style="display:none;">
+            <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id">
+            <input type="hidden" name="razorpay_order_id"   id="rzp_order_id">
+            <input type="hidden" name="razorpay_signature"  id="rzp_signature">
+          </form>
 
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('buyer.checkout_address') }}" class="btn btn-outline-secondary">← Back</a>
-          <button type="submit" class="btn btn-success fw-bold flex-grow-1">
-            Place Order — ₹{{ total|int }} →
-          </button>
         </div>
-      </form>
+      </div>
     </div>
 
-    <!-- Price Summary Sidebar -->
+    <!-- RIGHT: Order Summary -->
     <div class="col-lg-4">
-      <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold">🧾 Price Details</div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span>₹{{ subtotal|int }}</span></div>
+      <div class="panel mb-3">
+        <div class="panel-header"><span class="panel-title">🧾 Order Summary</span></div>
+        <div style="padding:20px;">
+          {% for item in cart_items %}
+          <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:0.88rem;">
+            <span style="color:var(--txt-700);">{{ item.product.crop_name }} × {{ item.quantity|int }}</span>
+            <span style="font-weight:600;color:var(--txt-900);">₹{{ (item.product.price * item.quantity)|int }}</span>
+          </div>
+          {% endfor %}
+          <hr style="border-color:var(--border);">
+          <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
+            <span>Subtotal</span><span>₹{{ subtotal|int }}</span>
+          </div>
           {% if coupon_discount > 0 %}
-          <div class="d-flex justify-content-between mb-2 text-success">
+          <div class="d-flex justify-content-between mb-2 text-success" style="font-size:0.88rem;">
             <span>Coupon ({{ coupon.code }})</span><span>−₹{{ coupon_discount|int }}</span>
           </div>
           {% endif %}
-          <div class="d-flex justify-content-between mb-2">
+          <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
             <span>Delivery</span>
-            <span class="{{ 'text-success fw-bold' if delivery == 0 }}">{{ 'FREE' if delivery == 0 else '₹'~delivery }}</span>
+            <span style="{{ 'color:#16a34a;font-weight:700;' if delivery == 0 }}">{{ 'FREE 🎉' if delivery == 0 else '₹'~delivery }}</span>
           </div>
-          <hr>
-          <div class="d-flex justify-content-between fw-bold fs-5">
-            <span>Total</span><span class="text-success">₹{{ total|int }}</span>
+          <hr style="border-color:var(--border);">
+          <div class="d-flex justify-content-between" style="font-weight:800;font-size:1.1rem;">
+            <span>Total</span>
+            <span style="color:var(--accent-3);">₹{{ total|int }}</span>
           </div>
         </div>
       </div>
-      <div class="card shadow-sm">
-        <div class="card-body" style="font-size:13px;">
-          <div class="mb-2">📍 <strong>Delivering to:</strong></div>
-          <div class="text-muted">
-            {{ address.full_name }}<br>
-            {{ address.line1 }}, {{ address.city }} — {{ address.pincode }}
-          </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📍 Delivering To</span></div>
+        <div style="padding:16px;font-size:0.86rem;color:var(--txt-500);">
+          <div style="font-weight:700;color:var(--txt-900);margin-bottom:4px;">{{ address.full_name }}</div>
+          {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}<br>
+          {{ address.city }}, {{ address.state }} — {{ address.pincode }}<br>
+          📞 {{ address.phone }}
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+.payment-option {
+  border: 2px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.payment-option:hover { border-color: var(--accent); background: var(--bg-teal); }
+.payment-option.active { border-color: var(--accent); background: var(--bg-teal); }
+.payment-option.active::before { content: '✓'; float:right; color: var(--accent-3); font-weight:800; }
+.pay-badge {
+  display: inline-block;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-2);
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--txt-500);
+  margin: 3px 2px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+let selectedMethod = 'razorpay';
+
+function selectPayment(method, el) {
+  selectedMethod = method;
+  document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  const btn = document.getElementById('payBtn');
+  btn.textContent = method === 'cod'
+    ? 'Place Order — ₹{{ total|int }} (COD) →'
+    : 'Pay ₹{{ total|int }} Online →';
+}
+
+function handlePayment() {
+  if (selectedMethod === 'cod') {
+    document.getElementById('codForm').submit();
+    return;
+  }
+  // Razorpay
+  const btn = document.getElementById('payBtn');
+  btn.textContent = 'Opening payment...';
+  btn.disabled = true;
+
+  fetch('{{ url_for("buyer.create_razorpay_order") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({amount: {{ total|int }}})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.order_id) {
+      alert('Payment initiation failed. Please try again.');
+      btn.textContent = 'Pay ₹{{ total|int }} →';
+      btn.disabled = false;
+      return;
+    }
+    const options = {
+      key: '{{ razorpay_key_id }}',
+      amount: data.amount,
+      currency: 'INR',
+      name: 'AgroConnect',
+      description: 'Fresh Farm Produce',
+      image: '/static/images/logo.png',
+      order_id: data.order_id,
+      prefill: {
+        name: '{{ address.full_name }}',
+        contact: '{{ address.phone }}'
+      },
+      theme: { color: '#16a34a' },
+      handler: function(response) {
+        document.getElementById('rzp_payment_id').value = response.razorpay_payment_id;
+        document.getElementById('rzp_order_id').value   = response.razorpay_order_id;
+        document.getElementById('rzp_signature').value  = response.razorpay_signature;
+        document.getElementById('rzpForm').submit();
+      },
+      modal: {
+        ondismiss: function() {
+          btn.textContent = 'Pay ₹{{ total|int }} →';
+          btn.disabled = false;
+        }
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.open();
+  })
+  .catch(err => {
+    alert('Network error. Please try again.');
+    btn.textContent = 'Pay ₹{{ total|int }} →';
+    btn.disabled = false;
+  });
+}
+</script>
 {% endblock %}

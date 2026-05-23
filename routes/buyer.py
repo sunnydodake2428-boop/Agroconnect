@@ -4,6 +4,8 @@ from functools import wraps
 from models import Order, Cart, Product, Address, Review
 import uuid
 from datetime import datetime
+import hmac, hashlib
+from flask import current_app
 
 buyer = Blueprint('buyer', __name__)
 
@@ -199,6 +201,11 @@ def checkout_payment():
         total=total
     )
 
+    return render_template('buyer/checkout_payment.html',
+    ...existing params...,
+    razorpay_key_id=current_app.config['rzp_test_SsgiU47seL6deY']
+)
+
 
 # ─── PLACE ORDER ─────────────────────────────────────────────────────────────
 @buyer.route('/checkout/place-order', methods=['POST'])
@@ -323,3 +330,6 @@ def review(order_id):
         flash('Review submitted! Thank you 🙏', 'success')
         return redirect(url_for('buyer.dashboard'))
     return render_template('buyer/review.html', order=order)
+
+
+
