@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}UPI Payment — AgroConnect{% endblock %}
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:560px;">
+
+  <!-- Step Bar -->
+  <div class="checkout-steps mb-4">
+    <div class="step done">✓ Cart</div><div class="step-line done"></div>
+    <div class="step done">✓ Address</div><div class="step-line done"></div>
+    <div class="step active">💳 Payment</div><div class="step-line"></div>
+    <div class="step">✅ Done</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">📱 Pay via UPI / QR Code</span>
+      <span style="font-size:0.75rem;color:var(--txt-300);">🔒 Secure Payment</span>
+    </div>
+    <div style="padding:24px;">
+
+      <!-- Amount Banner -->
+      <div style="background:linear-gradient(135deg,rgba(22,163,74,0.15),rgba(45,212,191,0.10));border:1px solid rgba(45,212,191,0.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:24px;">
+        <div style="font-size:0.80rem;color:var(--txt-300);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Amount to Pay</div>
+        <div style="font-family:'Fraunces',serif;font-size:2.8rem;font-weight:700;color:var(--accent-3);line-height:1;">₹{{ total|int }}</div>
+        {% if delivery == 0 %}
+        <div style="font-size:0.75rem;color:#22c55e;margin-top:6px;">🎉 Free delivery included</div>
+        {% endif %}
+      </div>
+
+      <!-- QR Code -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:0.82rem;color:var(--txt-300);margin-bottom:14px;font-weight:600;">Scan QR Code to Pay</div>
+        <div style="display:inline-block;padding:16px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.15);">
+          <!-- Dynamic QR using Google Charts API -->
+          <img id="qrImg"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR&tn=AgroConnect Order Payment"
+            alt="UPI QR Code"
+            style="width:200px;height:200px;display:block;"
+            onerror="this.src='/static/images/logo.png'">
+        </div>
+        <div style="margin-top:14px;font-size:0.78rem;color:var(--txt-300);">
+          Open any UPI app → Scan QR → Pay ₹{{ total|int }}
+        </div>
+      </div>
+
+      <!-- UPI Apps -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--txt-300);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Or Pay with UPI App</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          {% for app, emoji, color in [
+            ('GPay','🔵','rgba(66,133,244,0.12)'),
+            ('PhonePe','🟣','rgba(99,91,255,0.12)'),
+            ('Paytm','🔷','rgba(2,99,224,0.12)'),
+            ('BHIM','🟠','rgba(255,107,53,0.12)')
+          ] %}
+          <button onclick="openUPI('{{ app }}')" style="background:{{ color }};border:1px solid var(--border);border-radius:12px;padding:12px 8px;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="font-size:1.4rem;">{{ emoji }}</div>
+            <div style="font-size:0.70rem;font-weight:700;color:var(--txt-500);margin-top:4px;">{{ app }}</div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- UPI ID Manual -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:24px;">
+        <div style="font-size:0.78rem;color:var(--txt-300);margin-bottom:8px;font-weight:600;">Or pay to UPI ID directly</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <code style="flex:1;font-size:0.90rem;color:var(--txt-900);background:var(--panel-bg);padding:10px 14px;border-radius:8px;border:1px solid var(--border);">agroconnect@ybl</code>
+          <button onclick="copyUPI()" style="background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.25);border-radius:8px;padding:10px 14px;cursor:pointer;color:var(--accent-3);font-size:0.80rem;font-weight:700;white-space:nowrap;" id="copyBtn">
+            📋 Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Confirm Form -->
+      <form method="POST" action="/checkout/upi-confirm" id="confirmForm">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.78rem;font-weight:700;color:var(--txt-300);text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:8px;">
+            UPI Transaction ID / Reference (Optional)
+          </label>
+          <input type="text" name="upi_ref" placeholder="e.g. 407171234567 (from your UPI app)"
+            style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--txt-900);font-size:0.90rem;outline:none;font-family:inherit;"
+            onfocus="this.style.borderColor='#2dd4bf'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+
+        <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:12px 16px;font-size:0.82rem;color:#fbbf24;margin-bottom:20px;">
+          ⚠️ Click "I've Paid" only after completing the payment in your UPI app.
+        </div>
+
+        <div style="display:flex;gap:12px;">
+          <a href="/checkout/payment" class="btn-outline" style="flex:1;text-align:center;">← Back</a>
+          <button type="submit" class="btn-green" style="flex:2;justify-content:center;padding:14px;font-size:0.95rem;" id="paidBtn">
+            ✅ I've Paid — Place Order
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openUPI(app) {
+  const upiLinks = {
+    'GPay':    'gpay://upi/pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR',
+    'PhonePe': 'phonepe://pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR',
+    'Paytm':   'paytmmp://pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR',
+    'BHIM':    'upi://pay?pa=agroconnect@ybl&pn=AgroConnect&am={{ total|int }}&cu=INR',
+  };
+  window.location.href = upiLinks[app] || upiLinks['BHIM'];
+}
+
+function copyUPI() {
+  navigator.clipboard.writeText('agroconnect@ybl').then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ Copied!';
+    btn.style.background = 'rgba(34,197,94,0.15)';
+    btn.style.borderColor = '#22c55e';
+    btn.style.color = '#22c55e';
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.style.background = 'rgba(45,212,191,0.12)';
+      btn.style.borderColor = 'rgba(45,212,191,0.25)';
+      btn.style.color = 'var(--accent-3)';
+    }, 2000);
+  });
+}
+
+document.getElementById('confirmForm').addEventListener('submit', function() {
+  const btn = document.getElementById('paidBtn');
+  btn.textContent = 'Placing order...';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

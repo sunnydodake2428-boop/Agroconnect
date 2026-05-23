@@ -70,6 +70,71 @@
             🔒 Payments powered by Razorpay. We never store your card details.
           </div>
 
+          <!-- ── UPI / QR ── -->
+          <div class="payment-option" id="opt-upi" onclick="selectPayment('upi', this)">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:44px;height:44px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:1.3rem;">📱</span>
+              </div>
+              <div>
+                <div style="font-weight:700;color:var(--txt-900);font-size:0.95rem;">UPI / QR Code</div>
+                <div style="font-size:0.78rem;color:var(--txt-300);">GPay · PhonePe · Paytm · BHIM · Any UPI App</div>
+              </div>
+              <div class="ms-auto d-flex gap-1 align-items-center">
+                <span style="font-size:0.72rem;background:rgba(34,197,94,0.12);color:#22c55e;padding:3px 10px;border-radius:100px;font-weight:700;border:1px solid rgba(34,197,94,0.25);">Instant</span>
+              </div>
+            </div>
+            <div class="payment-badges mt-3">
+              <span class="pay-badge">🔵 GPay</span>
+              <span class="pay-badge">🟣 PhonePe</span>
+              <span class="pay-badge">🔷 Paytm</span>
+              <span class="pay-badge">🟠 BHIM</span>
+              <span class="pay-badge">📷 QR Scan</span>
+            </div>
+          </div>
+
+          <!-- Security note -->
+          <div style="background:var(--bg-teal);border:1px solid rgba(45,212,191,0.25);border-radius:10px;padding:12px 16px;font-size:0.82rem;color:var(--accent-3);margin-top:16px;">
+            🔒 Payments powered by Razorpay. We never store your card details.
+          </div>'''
+
+content = content.replace(OLD, NEW)
+
+# Update handlePayment JS to handle UPI
+OLD_JS = """function handlePayment() {
+  if (selectedMethod === 'cod') {
+    document.getElementById('codForm').submit();
+    return;
+  }
+  // Razorpay"""
+
+NEW_JS = """function handlePayment() {
+  if (selectedMethod === 'cod') {
+    document.getElementById('codForm').submit();
+    return;
+  }
+  if (selectedMethod === 'upi') {
+    window.location.href = '/checkout/upi-payment';
+    return;
+  }
+  // Razorpay"""
+
+content = content.replace(OLD_JS, NEW_JS)
+
+# Update selectPayment JS to handle UPI label
+OLD_SEL = """  const btn = document.getElementById('payBtn');
+  btn.textContent = method === 'cod'
+    ? 'Place Order — ₹{{ total|int }} (COD) →'
+    : 'Pay ₹{{ total|int }} Online →';"""
+
+NEW_SEL = """  const btn = document.getElementById('payBtn');
+  if (method === 'cod') btn.textContent = 'Place Order — ₹{{ total|int }} (COD) →';
+  else if (method === 'upi') btn.textContent = 'Continue to UPI/QR →';
+  else btn.textContent = 'Pay ₹{{ total|int }} Online →';"""
+
+content = content.replace(OLD_SEL, NEW_SEL)
+
+
           <!-- Action Buttons -->
           <div class="d-flex gap-3 mt-4">
             <a href="{{ url_for('buyer.checkout_address') }}" class="btn-outline">← Back</a>

@@ -267,6 +267,77 @@ def razorpay_callback():
     return redirect(url_for('buyer.order_confirm', order_group_id=order_group_id))
 
 
+ # ─── UPI/QR PAYMENT ──────────────────────────────────────────────────────────
+@buyer.route('/checkout/upi-payment')
+@buyer_required  
+def upi_payment():
+    if 'selected_address_id' not in session:
+        flash('Please select a delivery address first.', 'warning')
+        return redirect(url_for('buyer.checkout_address'))
+
+    buyer_id   = session['user_id']
+    address    = Address.query.get(session['selected_address_id'])
+    cart_items = Cart.query.filter_by(buyer_id=buyer_id).all()
+
+    subtotal        = sum(i.product.price * i.quantity for i in cart_items) if cart_items else 0
+    coupon          = session.get('coupon', {})
+    coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
+    delivery        = 0 if subtotal > 500 else 40
+    total           = subtotal - coupon_discount + delivery
+
+    return render_template('buyer/upi_payment.html',
+        address=address, cart_items=cart_items,
+        subtotal=subtotal, coupon=coupon,
+        coupon_discount=coupon_discount, delivery=delivery, total=total)
+
+
+@buyer.route('/checkout/upi-confirm', methods=['POST'])
+@buyer_required
+def upi_confirm():
+    """User confirms they have paid via UPI/QR"""
+    buyer_id       = session['user_id']
+    cart_items     = Cart.query.filter_by(buyer_id=buyer_id).all()
+    upi_ref        = request.form.get('upi_ref', '').strip()
+
+    if not cart_items:
+        flash('Your cart is empty.', 'warning')
+        return redirect(url_for('buyer.cart'))
+
+    address        = Address.query.get(session.get('selected_address_id'))
+    delivery_str   = f"{address.line1}, {address.line2 or ''}, {address.city}, {address.state} - {address.pincode}"
+    order_group_id = 'AGC' + str(uuid.uuid4())[:8].upper()
+
+    subtotal        = sum(i.product.price * i.quantity for i in cart_items)
+    coupon          = session.get('coupon', {})
+    coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
+    delivery        = 0 if subtotal > 500 else 40
+
+    for item in cart_items:
+        order = Order(
+            order_group_id   = order_group_id,
+            buyer_id         = buyer_id,
+            farmer_id        = item.product.farmer_id,
+            product_id       = item.product_id,
+            quantity         = item.quantity,
+            total_price      = item.product.price * item.quantity,
+            delivery_address = delivery_str,
+            payment_method   = 'upi',
+            payment_id       = upi_ref or 'UPI-PENDING',
+            status           = 'confirmed',
+            created_at       = datetime.utcnow()
+        )
+        db.session.add(order)
+        db.session.delete(item)
+
+    session.pop('coupon', None)
+    session.pop('selected_address_id', None)
+    db.session.commit()
+
+    flash('Payment confirmed! Order placed 🎉', 'success')
+    return redirect(url_for('buyer.order_confirm', order_group_id=order_group_id))
+
+
+
 # ─── PLACE ORDER (COD) ────────────────────────────────────────────────────────
 @buyer.route('/checkout/place-order', methods=['POST'])
 @buyer_required
