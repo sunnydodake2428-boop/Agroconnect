@@ -87,6 +87,8 @@ def update_profile():
     user.email    = request.form.get('email', user.email).strip()
     user.phone    = request.form.get('phone', '').strip()
     user.location = request.form.get('location', '').strip()
+    if session.get('user_role') == 'farmer':
+        user.upi_id = request.form.get('upi_id', '').strip()
     db.session.commit()
     session['user_name'] = user.name
     flash('Profile updated successfully!', 'success')

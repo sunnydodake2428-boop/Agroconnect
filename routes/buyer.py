@@ -68,7 +68,7 @@ def cart():
     subtotal  = sum(item.product.price * item.quantity for item in cart_items) if cart_items else 0
     mrp_total = sum((item.product.mrp or item.product.price) * item.quantity for item in cart_items) if cart_items else 0
     discount  = mrp_total - subtotal
-    delivery  = 0 if subtotal > 500 else 40
+    delivery  = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
     coupon    = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
     total     = subtotal - coupon_discount + delivery
@@ -177,7 +177,7 @@ def checkout_payment():
     subtotal        = sum(i.product.price * i.quantity for i in cart_items) if cart_items else 0
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
-    delivery        = 0 if subtotal > 500 else 40
+    delivery        = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
     total           = subtotal - coupon_discount + delivery
 
     return render_template('buyer/checkout_payment.html',
@@ -205,7 +205,7 @@ def create_razorpay_order():
     subtotal        = sum(i.product.price * i.quantity for i in cart_items)
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
-    delivery        = 0 if subtotal > 500 else 40
+    delivery        = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
     total           = subtotal - coupon_discount + delivery
     amount_paise    = int(total * 100)
 
@@ -282,13 +282,22 @@ def upi_payment():
     subtotal        = sum(i.product.price * i.quantity for i in cart_items) if cart_items else 0
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
-    delivery        = 0 if subtotal > 500 else 40
+    delivery        = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
     total           = subtotal - coupon_discount + delivery
+
+    # Get farmer UPI IDs from cart items
+    from models import User
+    farmer_upi = None
+    if cart_items:
+        farmer = User.query.get(cart_items[0].product.farmer_id)
+        if farmer and farmer.upi_id:
+            farmer_upi = farmer.upi_id
 
     return render_template('buyer/upi_payment.html',
         address=address, cart_items=cart_items,
         subtotal=subtotal, coupon=coupon,
-        coupon_discount=coupon_discount, delivery=delivery, total=total)
+        coupon_discount=coupon_discount, delivery=delivery,
+        total=total, farmer_upi=farmer_upi)
 
 
 @buyer.route('/checkout/upi-confirm', methods=['POST'])
@@ -310,7 +319,7 @@ def upi_confirm():
     subtotal        = sum(i.product.price * i.quantity for i in cart_items)
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
-    delivery        = 0 if subtotal > 500 else 40
+    delivery        = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
 
     for item in cart_items:
         order = Order(
@@ -357,7 +366,7 @@ def place_order():
     subtotal        = sum(i.product.price * i.quantity for i in cart_items)
     coupon          = session.get('coupon', {})
     coupon_discount = round(subtotal * coupon.get('discount_pct', 0) / 100)
-    delivery        = 0 if subtotal > 500 else 40
+    delivery        = 0 if subtotal > 300 else (7 if subtotal > 200 else (9 if subtotal > 100 else 11))
     order_group_id = 'AGC' + str(uuid.uuid4())[:8].upper()
     delivery_str   = f"{address.line1}, {address.line2 or ''}, {address.city}, {address.state} - {address.pincode}"
 

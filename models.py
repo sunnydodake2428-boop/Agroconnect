@@ -11,6 +11,7 @@ class User(db.Model):
     phone      = db.Column(db.String(15))
     location   = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    upi_id     = db.Column(db.String(100))
 
 class Product(db.Model):
     __tablename__ = 'products'
