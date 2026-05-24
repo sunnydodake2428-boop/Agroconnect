@@ -76,6 +76,23 @@ app = create_app()
 
 with app.app_context():
     db.create_all()
+    # Auto-migrate: add new columns safely
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            for sql in [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_pic VARCHAR(300)",
+                "ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_group_id VARCHAR(20)",
+                "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id VARCHAR(100)",
+            ]:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 if __name__ == '__main__':
     app.run(debug=False)
